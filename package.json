@@ -1,0 +1,25 @@
+{
+  "name": "surf-autorest",
+  "version": "0.1.0",
+  "description": "surf tasks for AutoRest",
+  "main": "dist/app.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "postinstall": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/olydis/surf.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/olydis/surf/issues"
+  },
+  "homepage": "https://github.com/olydis/surf#readme",
+  "dependencies": {
+    "@types/node": "^7.0.5",
+    "surf-build": "https://github.com/olydis/surf",
+    "typescript": "^2.4.2"
+  }
+}
