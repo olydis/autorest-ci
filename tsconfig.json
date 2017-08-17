@@ -1,5 +1,8 @@
 {
     "compilerOptions": {
+        "lib": [
+            "es2016"
+        ],
         "module": "commonjs",
         "outDir": "dist",
         "target": "es2016",
