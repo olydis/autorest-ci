@@ -29,6 +29,7 @@ async function main() {
     reportStatus("running");
     await delay(3000);
   }
+  reportStatus("done");
 }
 
 main();

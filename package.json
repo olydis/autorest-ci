@@ -1,7 +1,7 @@
 {
-  "name": "surf-autorest",
+  "name": "autorest-ci",
   "version": "0.1.0",
-  "description": "surf tasks for AutoRest",
+  "description": "AutoRest CI job",
   "main": "dist/app.js",
   "scripts": {
     "start": "node dist/app.js",
@@ -9,17 +9,22 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/olydis/surf.git"
+    "url": "git+https://github.com/olydis/autorest-ci.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/olydis/surf/issues"
+    "url": "https://github.com/olydis/autorest-ci/issues"
   },
-  "homepage": "https://github.com/olydis/surf#readme",
+  "homepage": "https://github.com/olydis/autorest-ci#readme",
   "dependencies": {
     "@types/node": "^7.0.5",
-    "surf-build": "https://github.com/olydis/surf",
+    "@types/nodegit": "^0.18.1",
+    "@types/request": "^2.0.1",
+    "@types/request-promise-native": "^1.0.6",
+    "nodegit": "^0.20.1",
+    "request": "^2.81.0",
+    "request-promise-native": "^1.0.4",
     "typescript": "^2.4.2"
   }
 }

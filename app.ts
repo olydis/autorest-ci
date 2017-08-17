@@ -1,76 +1,124 @@
-#!/usr/bin/env node
-
-import { fork } from "child_process";
-import { arch, platform, release } from "os";
-import { delay } from './delay';
-import { getBinPath } from './get-bin-path';
-import { ManagedChildProcess } from "./managed-child-process";
-import { CIStatus, parseStatus } from './status';
+import * as request_plain from "request-promise-native";
+import { arch, platform, release, tmpdir } from "os";
+import { join } from "path";
+import { } from "nodegit";
 
 // config
-// const ciIdentifier = `surf/${platform()}-${release()}-${arch()}`;
-const ciIdentifier = `surf/${platform()}-${arch()}`;
-const token = process.argv[2] || process.env.GITHUB_TOKEN;
+const githubOwner = "Azure";
+const githubRepo = "autorest.common";
+const githubToken = process.env.GITHUB_TOKEN;
+const ciIdentifier = `${platform()}-${arch()}`;
+const ciStatusTimeoutMs = 1000 * 60 * 5; // 5min
+const jobUid = Math.random().toString(36).substr(2, 5);
+const tmpFolder = join(tmpdir(), jobUid);
 
-if (typeof token !== "string") {
-  console.error("Provide GitHub token (needs 'repo' and 'gist' permissions) via 'GITHUB_TOKEN' environment variable or as CLI arg");
-  process.exit(1);
+// helpers
+const request = request_plain.defaults({
+  headers: {
+    "User-Agent": "AutoRest CI",
+    "Authorization": "token " + githubToken
+  }
+});
+
+const delay = (ms: number): Promise<void> => new Promise<void>(res => setTimeout(res, ms));
+
+// GitHub
+type PullRequest = { number: number, title: string, baseID: string, headID: string };
+async function getPullRequests(): Promise<PullRequest[]> { // https://developer.github.com/v3/pulls/#list-pull-requests
+  const res = await request.get(`https://api.github.com/repos/${githubOwner}/${githubRepo}/pulls`);
+  const prs = JSON.parse(res);
+  return prs.map(x => {
+    return <PullRequest>{
+      number: x.number,
+      title: x.title,
+      baseID: x.base.sha,
+      headID: x.head.sha
+    };
+  });
+}
+type State = "success" | "pending" | "failure";
+type Status = { updatedAt: Date, state: State, description: string, url: string };
+type Statuses = { [jobName: string]: Status };
+async function getPullRequestStatuses(pr: PullRequest): Promise<Statuses> { // https://developer.github.com/v3/repos/statuses/#get-the-combined-status-for-a-specific-ref
+  const res = await request.get(`https://api.github.com/repos/${githubOwner}/${githubRepo}/commits/${pr.headID}/status`);
+  const statuses = JSON.parse(res).statuses;
+  const result: Statuses = {};
+  for (const status of statuses) {
+    result[status.context] = {
+      updatedAt: new Date(status.updated_at),
+      state: status.state,
+      description: status.description,
+      url: status.target_url
+    };
+  }
+  return result;
 }
 
-// jobs
-const maxStatusesToKeep = 10;
-const lastStatuses: { [name: string]: CIStatus[] } = {};
-const jobs: { [name: string]: ManagedChildProcess } = {};
-const addJob = (repo: string): void => {
-  const args = ["-r", `https://github.com/Azure/${repo}`, "--", "node", "app-build", ciIdentifier];
-  console.log(`Adding job: surf-run ${args.join(" ")}`);
-  lastStatuses[repo] = [];
-  jobs[repo] = new ManagedChildProcess(() =>
-    fork(
-      getBinPath("surf-build", "surf-run"),
-      args,
-      { cwd: __dirname, silent: true }),
-    msg => {
-      for (const status of parseStatus(msg)) {
-        lastStatuses[repo].push(status);
-        if (lastStatuses[repo].length > maxStatusesToKeep) {
-          lastStatuses[repo].shift();
+// app
+
+function log(x: any): void { console.log(x); }
+
+async function getJobStatus(pr: PullRequest): Promise<Status | undefined> {
+  const statuses = await getPullRequestStatuses(pr);
+  return statuses[ciIdentifier];
+}
+
+async function isLastStatusOurs(pr: PullRequest): Promise<boolean> {
+  const status = await getJobStatus(pr);
+  return status && status.description.startsWith(jobUid);
+}
+
+async function updateJobStatus(pr: PullRequest, state: State, description: string, url?: string): Promise<void> {
+  // probe statuses to see whether we accidentally run concurrently
+
+}
+
+async function runJob(pr: PullRequest): Promise<void> {
+  updateJobStatus(pr, "pending", "Fetching PR");
+  log("   - fetching");
+
+}
+
+async function main() {
+  log("CI job info");
+  log(` - CI identifier: ${ciIdentifier}`);
+  log(` - GitHub repo: ${githubOwner}/${githubRepo}`);
+  log(` - using tmp folder: ${tmpFolder}`);
+
+  const knownPRs: number[] = [];
+  while (true) {
+    log("Polling PRs");
+    const prs = await getPullRequests();
+    for (const pr of prs) {
+      if (!knownPRs.includes(pr.number)) {
+        log(` - PR ${pr.number} (${pr.title})`);
+        const status = await getJobStatus(pr);
+        if (!status) {
+          log("   - new");
+          await runJob(pr);
+          knownPRs.push(pr.number);
+        }
+        else if (status.state === "success") {
+          log("   - success (already passed)");
+          knownPRs.push(pr.number);
+        }
+        else if (status.state === "pending" && Date.now() - status.updatedAt.getTime() < ciStatusTimeoutMs) {
+          log("   - pending (looks active)");
+        }
+        else if (status.state === "pending") {
+          log("   - pending (looks stuck)");
+          await runJob(pr);
+          knownPRs.push(pr.number);
+        }
+        else if (status.state === "failure") {
+          log("   - failure");
+          await runJob(pr);
+          knownPRs.push(pr.number);
         }
       }
     }
-  );
-}
 
-addJob("autorest.common");
-addJob("autorest.modeler");
-addJob("autorest.azureresourceschema");
-addJob("autorest.csharp");
-addJob("autorest.go");
-addJob("autorest.java");
-addJob("autorest.nodejs");
-addJob("autorest.php");
-addJob("autorest.ruby");
-addJob("autorest.python");
-addJob("autorest.testserver");
-
-// status loop
-const padRight = (str: string, len: number, pad: string = " ") => str.length >= len ? str : padRight(str + pad, len);
-
-async function main() {
-  while (true) {
-    console.log();
-    console.log(`This is '${ciIdentifier}'`);
-    console.log(`${padRight("JOB", 32)} ${padRight("PID", 7)} STATUS`);
-    for (const jobName of Object.keys(jobs)) {
-      const job = jobs[jobName];
-      const rawStatuses = lastStatuses[jobName];
-      let commitIds = rawStatuses.map(x => x.commitID).sort();
-      commitIds = commitIds.filter((x, i) => i === 0 || x !== commitIds[i - 1]);
-      const distinctStatuses = commitIds.map(id => rawStatuses.filter(x => x.commitID === id).reverse()[0]);
-      console.log(`${padRight(jobName, 32)} ${padRight((job.pid || "---") + "", 7)} ${distinctStatuses.map(x => `${x.commitID} ${x.status}`).join(", ")}`);
-      job.start();
-    }
-    await delay(1000);
+    await delay(30000);
   }
 }
 
