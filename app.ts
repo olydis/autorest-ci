@@ -1,7 +1,7 @@
 import * as request_plain from "request-promise-native";
 import { arch, platform, release, tmpdir } from "os";
 import { join } from "path";
-import { } from "nodegit";
+import * as simpleGit from "simple-git/promise";
 
 // config
 const githubOwner = "Azure";
@@ -53,6 +53,14 @@ async function getPullRequestStatuses(pr: PullRequest): Promise<Statuses> { // h
   }
   return result;
 }
+async function setPullRequestStatus(pr: PullRequest, state: State, description: string, url?: string): Promise<void> { // https://developer.github.com/v3/repos/statuses/#create-a-status
+  const body: any = {};
+  body.state = state;
+  if (url) body.target_url = url;
+  body.description = description;
+  body.context = ciIdentifier;
+  const res = await request.post(`https://api.github.com/repos/${githubOwner}/${githubRepo}/statuses/${pr.headID}`, { body: body });
+}
 
 // app
 
@@ -68,15 +76,21 @@ async function isLastStatusOurs(pr: PullRequest): Promise<boolean> {
   return status && status.description.startsWith(jobUid);
 }
 
-async function updateJobStatus(pr: PullRequest, state: State, description: string, url?: string): Promise<void> {
-  // probe statuses to see whether we accidentally run concurrently
-
-}
-
 async function runJob(pr: PullRequest): Promise<void> {
-  updateJobStatus(pr, "pending", "Fetching PR");
-  log("   - fetching");
+  const jobFolder = join(tmpFolder, pr.number + "_" + new Date().toISOString());
+  const git = simpleGit();
 
+  setPullRequestStatus(pr, "pending", "Fetching");
+  log(`   - fetching (target: '${jobFolder}')`);
+  log("     - cloning");
+  await git.clone(`https://${githubToken}@github.com/${githubOwner}/${githubRepo}`, jobFolder);
+  log("     - checkout base");
+  await git.checkout(pr.baseID);
+  log("     - merge head");
+  await git.merge([pr.headID]);
+
+  log("done");
+  await delay(1000 * 60 * 60);
 }
 
 async function main() {
@@ -87,35 +101,40 @@ async function main() {
 
   const knownPRs: number[] = [];
   while (true) {
-    log("Polling PRs");
-    const prs = await getPullRequests();
-    for (const pr of prs) {
-      if (!knownPRs.includes(pr.number)) {
-        log(` - PR ${pr.number} (${pr.title})`);
-        const status = await getJobStatus(pr);
-        if (!status) {
-          log("   - new");
-          await runJob(pr);
-          knownPRs.push(pr.number);
-        }
-        else if (status.state === "success") {
-          log("   - success (already passed)");
-          knownPRs.push(pr.number);
-        }
-        else if (status.state === "pending" && Date.now() - status.updatedAt.getTime() < ciStatusTimeoutMs) {
-          log("   - pending (looks active)");
-        }
-        else if (status.state === "pending") {
-          log("   - pending (looks stuck)");
-          await runJob(pr);
-          knownPRs.push(pr.number);
-        }
-        else if (status.state === "failure") {
-          log("   - failure");
-          await runJob(pr);
-          knownPRs.push(pr.number);
+    try {
+      log("Polling PRs");
+      const prs = await getPullRequests();
+      for (const pr of prs) {
+        if (!knownPRs.includes(pr.number)) {
+          log(` - PR #${pr.number} ('${pr.title}')`);
+          const status = await getJobStatus(pr);
+          if (!status) {
+            log("   - classification: new");
+            await runJob(pr);
+            knownPRs.push(pr.number);
+          }
+          else if (status.state === "success") {
+            log("   - classification: success (already passed)");
+            knownPRs.push(pr.number);
+          }
+          else if (status.state === "pending" && Date.now() - status.updatedAt.getTime() < ciStatusTimeoutMs) {
+            log("   - classification: pending (looks active)");
+          }
+          else if (status.state === "pending") {
+            log("   - classification: pending (looks stuck)");
+            await runJob(pr);
+            knownPRs.push(pr.number);
+          }
+          else if (status.state === "failure") {
+            log("   - classification: failure");
+            await runJob(pr);
+            knownPRs.push(pr.number);
+          }
         }
       }
+    } catch (e) {
+      console.error(e);
+      log("Will retry...");
     }
 
     await delay(30000);

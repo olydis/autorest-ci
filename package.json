@@ -19,12 +19,11 @@
   "homepage": "https://github.com/olydis/autorest-ci#readme",
   "dependencies": {
     "@types/node": "^7.0.5",
-    "@types/nodegit": "^0.18.1",
     "@types/request": "^2.0.1",
     "@types/request-promise-native": "^1.0.6",
-    "nodegit": "^0.20.1",
     "request": "^2.81.0",
     "request-promise-native": "^1.0.4",
+    "simple-git": "^1.75.0",
     "typescript": "^2.4.2"
   }
 }
