@@ -2,6 +2,7 @@ import * as request_plain from "request-promise-native";
 import { arch, platform, release, tmpdir } from "os";
 import { join } from "path";
 import * as simpleGit from "simple-git/promise";
+import * as mkdir from "mkdirp";
 
 // config
 const githubOwner = "Azure";
@@ -59,7 +60,7 @@ async function setPullRequestStatus(pr: PullRequest, state: State, description: 
   if (url) body.target_url = url;
   body.description = description;
   body.context = ciIdentifier;
-  const res = await request.post(`https://api.github.com/repos/${githubOwner}/${githubRepo}/statuses/${pr.headID}`, { body: body });
+  const res = await request.post(`https://api.github.com/repos/${githubOwner}/${githubRepo}/statuses/${pr.headID}`, { body: JSON.stringify(body) });
 }
 
 // app
@@ -80,17 +81,23 @@ async function runJob(pr: PullRequest): Promise<void> {
   const jobFolder = join(tmpFolder, pr.number + "_" + new Date().toISOString());
   const git = simpleGit();
 
-  setPullRequestStatus(pr, "pending", "Fetching");
-  log(`   - fetching (target: '${jobFolder}')`);
-  log("     - cloning");
-  await git.clone(`https://${githubToken}@github.com/${githubOwner}/${githubRepo}`, jobFolder);
-  log("     - checkout base");
-  await git.checkout(pr.baseID);
-  log("     - merge head");
-  await git.merge([pr.headID]);
+  await setPullRequestStatus(pr, "pending", "Fetching");
+  try {
+    log(`   - fetching (target: '${jobFolder}')`);
+    log("     - cloning");
+    await new Promise(res => mkdir(jobFolder, res));
+    await git.clone(`https://${githubToken}@github.com/${githubOwner}/${githubRepo}`, jobFolder);
+    log("     - checkout base");
+    await git.checkout(pr.baseID);
+    log("     - merge head");
+    await git.merge([pr.headID]);
+  } catch (e) {
+    // at least try notifying about failure
+    try { await setPullRequestStatus(pr, "pending", "Fetching"); } catch (_) { }
+    throw e;
+  }
 
   log("done");
-  await delay(1000 * 60 * 60);
 }
 
 async function main() {
