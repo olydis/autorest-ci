@@ -112,10 +112,11 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     try { await ghClient.setPullRequestStatus(pr, "failure", "" + e); } catch (en) {
       log(`       - failed notifying: ${en}`);
     }
-    log(`       - ex: ${e}`);
     try {
       log(`       - output: ${pollOutputSave()}`);
-    } catch (_) { }
+    } catch (_) {
+      log(`       - output (fallback): ${e}`);
+    }
     throw e;
   }
 }
