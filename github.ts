@@ -40,7 +40,8 @@ export class GitHubCiClient {
   }
 
   public async getPullRequests(): Promise<PullRequest[]> { // https://developer.github.com/v3/pulls/#list-pull-requests
-    return JSON.parse(await this.request.get(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/pulls`)).map(parsePR);
+    const res = await this.request.get(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/pulls`);
+    return JSON.parse(res).map(parsePR);
   }
   public async getPullRequest(prNumber: number): Promise<PullRequest> { // https://developer.github.com/v3/pulls/#get-a-single-pull-request
     return parsePR(JSON.parse(await this.request.get(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/pulls/${prNumber}`)));
@@ -63,7 +64,7 @@ export class GitHubCiClient {
     const body: any = {};
     body.state = state;
     if (url) body.target_url = url;
-    if (description) body.description = this.statusPrefix + description;
+    if (description) body.description = (this.statusPrefix + description).slice(0, 140);
     body.context = this.ciIdentifier;
     const res = await this.request.post(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/statuses/${pr.headID}`, { body: JSON.stringify(body) });
   }

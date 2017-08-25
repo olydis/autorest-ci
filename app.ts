@@ -51,6 +51,7 @@ function runCommand(command: string, cwd: string): [() => string, Promise<Error 
 }
 
 async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> {
+  let pollOutputSave = (): string => "";
   try {
     const jobFolder = join(tmpFolder, new Date().toISOString().replace(/[:-]/g, "").split('.')[0] + "_" + pr.number);
     log("   - creating workspace");
@@ -79,6 +80,7 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     await ghClient.setPullRequestStatus(pr, "pending", "Running test job");
     log(`   - running test job`);
     const [pollOutput, resultPromise] = runCommand("npm install && npm test", jobFolder);
+    pollOutputSave = pollOutput;
     const sendFeedback = async () => {
     };
     let mutex = false;
@@ -105,9 +107,15 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     // recheck if we just marked an updated PR as succeeded
     if (await ghClient.wasUpdated(pr)) { await ghClient.setPullRequestStatus(pr, "pending", `Stall. Just set status of an updated PR.`); log(`     - stall`); }
   } catch (e) {
+    log(`     - error`);
     // at least try notifying about failure
-    try { await ghClient.setPullRequestStatus(pr, "failure", ("" + e).slice(0, 1000)); } catch (_) { }
-    log(`     - error (${e})`);
+    try { await ghClient.setPullRequestStatus(pr, "failure", "" + e); } catch (en) {
+      log(`       - failed notifying: ${en}`);
+    }
+    log(`       - ex: ${e}`);
+    try {
+      log(`       - output: ${pollOutputSave()}`);
+    } catch (_) { }
     throw e;
   }
 }
@@ -117,7 +125,7 @@ async function main() {
   log(` - CI identifier: ${ciIdentifier}`);
   log(` - using tmp folder: ${tmpFolder}`);
 
-  const prs: { [prNumber: number]: Date } = {};
+  const knownPRs: { [prNumber: number]: PullRequest } = {};
 
   while (true) {
     let didAnything = false; // for backing off
@@ -127,18 +135,18 @@ async function main() {
       const prs = await ghClient.getPullRequests();
       for (const pr of prs) {
         try {
-          if (prs[pr.number] && prs[pr.number].updatedAt === pr.updatedAt) continue; // seen that PR?
+          if (knownPRs[pr.number] && knownPRs[pr.number].updatedAt === pr.updatedAt) continue; // seen that PR?
           log(` - PR #${pr.number} ('${pr.title}')`);
           const status = await ghClient.getJobStatus(pr);
           if (!status || status.updatedAt < pr.updatedAt) {
             log("   - classification: " + (status ? "updated" : "new"));
             await runJob(ghClient, pr);
-            prs[pr.number] = pr;
+            knownPRs[pr.number] = pr;
             didAnything = true;
           }
           else if (status.state === "success" || status.state === "failure") {
             log(`   - classification: done (${status.state})`);
-            prs[pr.number] = pr;
+            knownPRs[pr.number] = pr;
           }
           else if (status.state === "pending" && Date.now() - status.updatedAt.getTime() < ciStatusTimeoutMs) {
             log("   - classification: looks active (pending)");
@@ -146,7 +154,7 @@ async function main() {
           else if (status.state === "pending") {
             log("   - classification: looks stuck (pending)");
             await runJob(ghClient, pr);
-            prs[pr.number] = pr;
+            knownPRs[pr.number] = pr;
             didAnything = true;
           }
         } catch (e) {
