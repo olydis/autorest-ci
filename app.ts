@@ -65,6 +65,8 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     await git.clone(ghClient.cloneUrl, jobFolder);
     log(`     - checkout base (${pr.baseRef})`);
     await git.checkout(pr.baseRef);
+    log(`     - fetch head (${pr.headRepoUrl})`);
+    await git.fetch(pr.headRepoUrl, pr.headID);
     log(`     - merge head (${pr.headID})`);
     await git.merge([pr.headID]);
 

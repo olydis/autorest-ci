@@ -2,7 +2,7 @@ import { arch, platform, release, tmpdir } from "os";
 import { RequestAPI, UriOptions, UrlOptions } from "request";
 import { defaults as request_defaults, RequestPromise, RequestPromiseOptions } from "request-promise-native";
 
-export type PullRequest = { updatedAt: Date, number: number, title: string, baseRef: string, baseID: string, headID: string };
+export type PullRequest = { updatedAt: Date, number: number, title: string, baseRef: string, baseID: string, headID: string, headRepoUrl: string };
 export type State = "success" | "pending" | "failure";
 export type Status = { updatedAt: Date, state: State, description: string, url: string };
 export type Statuses = { [jobName: string]: Status };
@@ -14,7 +14,8 @@ function parsePR(pr: any): PullRequest {
     title: pr.title,
     baseRef: pr.base.ref,
     baseID: pr.base.sha,
-    headID: pr.head.sha
+    headID: pr.head.sha,
+    headRepoUrl: pr.head.repo.clone_url
   };
 }
 
