@@ -97,7 +97,16 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     if (!await ghClient.isLastStatusOurs(pr)) { log("   - abort: looks like another worker handles this PR"); return; }
 
     // process error
-    if (error) throw error;
+    if (error) {
+      log(`     - error`);
+      await ghClient.setPullRequestStatus(pr, "failure", "" + error);
+      try {
+        log(`       - output: ${pollOutputSave()}`);
+      } catch (_) {
+        log(`       - output (fallback): ${error}`);
+      }
+      throw e;
+    }
 
     // process success
     const timeStamp3 = Date.now();
@@ -107,16 +116,12 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     // recheck if we just marked an updated PR as succeeded
     if (await ghClient.wasUpdated(pr)) { await ghClient.setPullRequestStatus(pr, "pending", `Stall. Just set status of an updated PR.`); log(`     - stall`); }
   } catch (e) {
-    log(`     - error`);
+    log(`     - job error`);
     // at least try notifying about failure
-    try { await ghClient.setPullRequestStatus(pr, "failure", "" + e); } catch (en) {
+    try { await ghClient.setPullRequestStatus(pr, "pending", "Stall. Job error: " + e); } catch (en) {
       log(`       - failed notifying: ${en}`);
     }
-    try {
-      log(`       - output: ${pollOutputSave()}`);
-    } catch (_) {
-      log(`       - output (fallback): ${e}`);
-    }
+    log(`       - output (fallback): ${e}`);
     throw e;
   }
 }
