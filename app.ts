@@ -66,8 +66,9 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     await git.clone(ghClient.cloneUrl, jobFolder);
     log(`     - checkout base (${pr.baseRef})`);
     await git.checkout(pr.baseRef);
-    log(`     - fetch head (${pr.headRepoUrl})`);
-    await git.fetch(pr.headRepoUrl, pr.headID);
+    log(`     - fetch head repo (${pr.headRepoUrl})`);
+    await (git as any).addRemote("other", pr.headRepoUrl);
+    await git.fetch("other", "-v");
     log(`     - merge head (${pr.headID})`);
     await git.merge([pr.headID]);
 
@@ -121,7 +122,7 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     try { await ghClient.setPullRequestStatus(pr, "pending", "Stall. Job error: " + e); } catch (en) {
       log(`       - failed notifying: ${en}`);
     }
-    log(`       - output (fallback): ${e}`);
+    log(`       - output: ${e}`);
   }
 }
 
