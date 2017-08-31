@@ -220,4 +220,7 @@ async function main() {
   }
 }
 
-main();
+while (true) {
+  main();
+  log("WORKER CARSHED, RESTARTING");
+}
