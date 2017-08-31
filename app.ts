@@ -185,8 +185,8 @@ async function main() {
 
   const knownPRs: { [prNumber: number]: PullRequest } = {};
 
-  try {
-    while (true) {
+  while (true) {
+    try {
       let didAnything = false; // for backing off
       for (const githubRepo of githubRepos) {
         const ghClient = new GitHubCiClient(ciIdentifier, workerID, githubOwner, githubRepo, githubToken);
@@ -218,11 +218,12 @@ async function main() {
         }
       }
       await delay(didAnything ? 10000 : 60000);
+    } catch (e) {
+      await delay(10000);
+      log("WORKER CARSHED:");
+      log(e);
     }
-  } catch {
-    await delay(10000);
-    log("WORKER CARSHED, RESTARTING");
   }
 }
 
-while (true) main();
+main();
