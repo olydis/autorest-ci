@@ -185,42 +185,44 @@ async function main() {
 
   const knownPRs: { [prNumber: number]: PullRequest } = {};
 
-  while (true) {
-    let didAnything = false; // for backing off
-    for (const githubRepo of githubRepos) {
-      const ghClient = new GitHubCiClient(ciIdentifier, workerID, githubOwner, githubRepo, githubToken);
-      log(`Polling PRs of ${githubOwner}/${githubRepo}`);
-      const prs = await ghClient.getPullRequests();
-      for (const pr of prs) {
-        if (knownPRs[pr.number] && knownPRs[pr.number].updatedAt === pr.updatedAt) continue; // seen that PR?
-        log(` - PR #${pr.number} ('${pr.title}')`);
-        const status = await ghClient.getJobStatus(pr);
-        if (!status || status.updatedAt < pr.updatedAt) {
-          log("   - classification: " + (status ? "updated" : "new"));
-          await runJob(ghClient, pr);
-          knownPRs[pr.number] = pr;
-          didAnything = true;
-        }
-        else if (status.state === "success" || status.state === "failure") {
-          log(`   - classification: done (${status.state})`);
-          knownPRs[pr.number] = pr;
-        }
-        else if (status.state === "pending" && Date.now() - status.updatedAt.getTime() < ciStatusTimeoutMs) {
-          log("   - classification: looks active (pending)");
-        }
-        else if (status.state === "pending") {
-          log("   - classification: looks stuck (pending)");
-          await runJob(ghClient, pr);
-          knownPRs[pr.number] = pr;
-          didAnything = true;
+  try {
+    while (true) {
+      let didAnything = false; // for backing off
+      for (const githubRepo of githubRepos) {
+        const ghClient = new GitHubCiClient(ciIdentifier, workerID, githubOwner, githubRepo, githubToken);
+        log(`Polling PRs of ${githubOwner}/${githubRepo}`);
+        const prs = await ghClient.getPullRequests();
+        for (const pr of prs) {
+          if (knownPRs[pr.number] && knownPRs[pr.number].updatedAt === pr.updatedAt) continue; // seen that PR?
+          log(` - PR #${pr.number} ('${pr.title}')`);
+          const status = await ghClient.getJobStatus(pr);
+          if (!status || status.updatedAt < pr.updatedAt) {
+            log("   - classification: " + (status ? "updated" : "new"));
+            await runJob(ghClient, pr);
+            knownPRs[pr.number] = pr;
+            didAnything = true;
+          }
+          else if (status.state === "success" || status.state === "failure") {
+            log(`   - classification: done (${status.state})`);
+            knownPRs[pr.number] = pr;
+          }
+          else if (status.state === "pending" && Date.now() - status.updatedAt.getTime() < ciStatusTimeoutMs) {
+            log("   - classification: looks active (pending)");
+          }
+          else if (status.state === "pending") {
+            log("   - classification: looks stuck (pending)");
+            await runJob(ghClient, pr);
+            knownPRs[pr.number] = pr;
+            didAnything = true;
+          }
         }
       }
+      await delay(didAnything ? 10000 : 60000);
     }
-    await delay(didAnything ? 10000 : 60000);
+  } catch {
+    await delay(10000);
+    log("WORKER CARSHED, RESTARTING");
   }
 }
 
-while (true) {
-  main();
-  log("WORKER CARSHED, RESTARTING");
-}
+while (true) main();
