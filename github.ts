@@ -84,6 +84,14 @@ export class GitHubCiClient {
   }
 
   public get cloneUrl(): string {
-    return `https://${this.githubToken}@github.com/${this.githubOwner}/${this.githubRepo}`
+    return `https://${this.githubToken}@github.com/${this.githubOwner}/${this.githubRepo}`;
+  }
+
+  public getPrUrl(pr: PullRequest): string {
+    return `https://github.com/${this.githubOwner}/${this.githubRepo}/pull/${pr.number}`;
+  }
+
+  public getPrName(pr: PullRequest): string {
+    return `${this.githubOwner}/${this.githubRepo}#${pr.number}`;
   }
 }

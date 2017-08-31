@@ -21,6 +21,7 @@
     "@types/node": "^7.0.5",
     "@types/request": "^2.0.1",
     "@types/request-promise-native": "^1.0.6",
+    "azure-storage": "^2.4.0",
     "mkdirp-promise": "^5.0.1",
     "request": "^2.81.0",
     "request-promise-native": "^1.0.4",
