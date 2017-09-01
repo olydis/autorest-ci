@@ -104,7 +104,7 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
       }
       return null;
     };
-    const pushFinal = async (success: boolean): Promise<Error | null> => pushLog(`</pre><style>body { background: ${success ? "#efe" : "#fee"} }</style>`);
+    const pushFinal = async (success: boolean): Promise<Error | null> => pushLog(`</pre><style>body { background: ${success ? "#cfc" : "#fcc"} }</style>`);
 
     // git
     const timeStamp1 = Date.now();
