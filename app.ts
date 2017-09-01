@@ -13,6 +13,7 @@ import * as as from "azure-storage";
 const ciIdentifier = `${platform()}-${arch()}`;
 const githubOwner = "Azure";
 const githubRepos = [
+  "autorest",
   "autorest.common",
   "autorest.modeler",
   "autorest.azureresourceschema",
@@ -76,7 +77,7 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
       { publicAccessLevel: "blob" },
       (error, result) => error ? rej(error) : res(result.name)));
     const blobContentSettings = { contentSettings: { contentType: "text/html", contentEncoding: "utf8" } };
-    const blob = workerID + jobID;
+    const blob = workerID + "_" + jobID;
     const url = `http://${azStorageAccount}.blob.core.windows.net/${container}/${blob}`;
     const urlAR = url + "?autorefresh";
     await new Promise<string>((res, rej) =>
@@ -95,6 +96,15 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
 <pre>`,
         blobContentSettings,
         (error, result) => error ? rej(error) : res(result.name)));
+    const pushLog = async (text: string): Promise<Error | null> => {
+      try {
+        await new Promise<void>((res, rej) => blobSvc.appendFromText(container, blob, text, blobContentSettings, (error, result) => error ? rej(error) : res()));
+      } catch (e) {
+        return e;
+      }
+      return null;
+    };
+    const pushFinal = async (success: boolean): Promise<Error | null> => pushLog(`</pre><style>body { background: ${success ? "#efe" : "#fee"} }</style>`);
 
     // git
     const timeStamp1 = Date.now();
@@ -124,13 +134,8 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     const sendFeedback = async () => {
       try {
         const output = pollOutput();
-        await new Promise<void>((res, rej) =>
-          blobSvc.appendFromText(
-            container,
-            blob,
-            output.slice(lastLength),
-            blobContentSettings,
-            (error, result) => error ? rej(error) : res()));
+        const err = await pushLog(output.slice(lastLength));
+        if (err) throw err;
         lastLength = output.length;
       } catch (e) {
         log(`     - failed to upload logs (${e})`);
@@ -152,6 +157,7 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     // process error
     if (error) {
       log(`     - error`);
+      pushFinal(false);
       await ghClient.setPullRequestStatus(pr, "failure", "" + error, url);
       try {
         log(`       - output: ${pollOutput()}`);
@@ -163,6 +169,7 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
 
     // process success
     const timeStamp3 = Date.now();
+    pushFinal(true);
     await ghClient.setPullRequestStatus(pr, "success", `Success (git took ${(timeStamp2 - timeStamp1) / 1000 | 0}s, tests took ${(timeStamp3 - timeStamp2) / 1000 | 0}s)`, url);
     log(`     - success`);
 
