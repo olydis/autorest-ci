@@ -122,7 +122,6 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     await git.merge([pr.headID]);
 
     // recheck if what we're doing still makes sense
-    if (await ghClient.wasUpdated(pr)) { log("   - abort: the PR was updated"); return; }
     if (!await ghClient.isLastStatusOurs(pr)) { log("   - abort: looks like another worker handles this PR"); return; }
 
     // job
@@ -151,7 +150,6 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     await sendFeedback();
 
     // recheck if what we're doing still makes sense
-    if (await ghClient.wasUpdated(pr)) { log("   - abort: the PR was updated"); return; }
     if (!await ghClient.isLastStatusOurs(pr)) { log("   - abort: looks like another worker handles this PR"); return; }
 
     // process error
@@ -172,9 +170,6 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     pushFinal(true);
     await ghClient.setPullRequestStatus(pr, "success", `Success (git took ${(timeStamp2 - timeStamp1) / 1000 | 0}s, tests took ${(timeStamp3 - timeStamp2) / 1000 | 0}s)`, url);
     log(`     - success`);
-
-    // recheck if we just marked an updated PR as succeeded
-    if (await ghClient.wasUpdated(pr)) { await ghClient.setPullRequestStatus(pr, "pending", `Stall. Just set status of an updated PR.`); log(`     - stall`); }
   } catch (e) {
     log(`     - job error`);
     // at least try notifying about failure
@@ -224,9 +219,9 @@ async function main() {
           }
         }
       }
-      await delay(didAnything ? 10000 : 60000);
+      await delay(didAnything ? 20000 : 120000);
     } catch (e) {
-      await delay(10000);
+      await delay(120000);
       log("WORKER CARSHED:");
       log(e);
     }
