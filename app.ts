@@ -48,18 +48,21 @@ if (!githubToken) {
 const delay = (ms: number): Promise<void> => new Promise<void>(res => setTimeout(res, ms));
 function log(x: any): void { console.log(x); }
 
-function runCommand(command: string, cwd: string): [() => string, Promise<Error | null>] {
+function runCommand(command: string, cwd: string): [() => string, Promise<Error | null>, () => void] {
   let output: string = "";
-  return [() => output, new Promise<Error | null>(r => {
+  let cancel: () => void = () => null;
+  const promise = new Promise<Error | null>(r => {
     let res = (e: Error | null) => { r(e); res = () => { }; };
     try {
       const cp = exec(command, { cwd }, err => res(err || null));
+      cancel = () => cp.kill();
       cp.stdout.on("data", chunk => output += chunk.toString());
       cp.stderr.on("data", chunk => output += chunk.toString());
     } catch (e) {
       res(e);
     }
-  })];
+  });
+  return [() => output, promise, cancel];
 }
 
 // connect to storage
@@ -128,7 +131,7 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
     const timeStamp2 = Date.now();
     await ghClient.setPullRequestStatus(pr, "pending", "Running test job", urlAR);
     log(`   - running test job`);
-    const [pollOutput, resultPromise] = runCommand("npm install && npm test", jobFolder);
+    const [pollOutput, resultPromise, cancel] = runCommand("npm install && npm test", jobFolder);
     let lastLength = 0;
     const sendFeedback = async () => {
       try {
@@ -138,6 +141,10 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
         lastLength = output.length;
       } catch (e) {
         log(`     - failed to upload logs (${e})`);
+      }
+      // timeout?
+      if (Date.now() - timeStamp2 > 1000 * 60 * 30) {
+        cancel();
       }
     };
     let mutex = false;
