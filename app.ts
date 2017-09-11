@@ -144,7 +144,7 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
       }
       // timeout?
       const timeoutSec = 60 * 30;
-      log(`     - heartbeat (${(Date.now() - timeStamp2) / 1000 | 0}s / ${timeoutSec | 1000}s)}`);
+      // log(`     - heartbeat (${(Date.now() - timeStamp2) / 1000 | 0}s / ${timeoutSec | 1000}s)}`);
       if (Date.now() - timeStamp2 > 1000 * timeoutSec) {
         log(`     - cancelling`);
         cancel();
