@@ -54,7 +54,7 @@ function runCommand(command: string, cwd: string): [() => string, Promise<Error 
   const promise = new Promise<Error | null>(r => {
     let res = (e: Error | null) => { r(e); res = () => { }; };
     try {
-      const cp = exec(command, { cwd }, err => res(err || null));
+      const cp = exec(command, { cwd, maxBuffer: 64 * 1000 * 1000 }, err => res(err || null));
       cancel = () => cp.kill('SIGKILL');
       cp.stdout.on("data", chunk => output += chunk.toString());
       cp.stderr.on("data", chunk => output += chunk.toString());
@@ -143,7 +143,9 @@ async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> 
         log(`     - failed to upload logs (${e})`);
       }
       // timeout?
-      if (Date.now() - timeStamp2 > 1000 * 60 * 30) {
+      const timeoutSec = 60 * 30;
+      log(`     - heartbeat (${(Date.now() - timeStamp2) / 1000 | 0}s / ${timeoutSec | 1000}s)}`);
+      if (Date.now() - timeStamp2 > 1000 * timeoutSec) {
         log(`     - cancelling`);
         cancel();
       }
