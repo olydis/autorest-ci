@@ -68,10 +68,10 @@ function runCommand(command: string, cwd: string): [() => string, Promise<Error 
 // connect to storage
 const blobSvc = createBlobService(azStorageAccount, azStorageAccessKey);
 
-async function runJob(ghClient: GitHubCiClient, pr: PullRequest): Promise<void> {
+async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): Promise<void> {
   try {
     const jobID = new Date().toISOString().replace(/[:-]/g, "").split('.')[0] + "_" + pr.number;
-    const jobFolder = join(tmpFolder, jobID);
+    const jobFolder = join(tmpFolder, jobID, repo);
     log("   - creating workspace");
     await mkdir(jobFolder);
     log("   - setting up blob storage");
@@ -210,7 +210,7 @@ async function main() {
           const status = await ghClient.getJobStatus(pr);
           if (!status || status.updatedAt < pr.updatedAt) {
             log("   - classification: " + (status ? "updated" : "new"));
-            await runJob(ghClient, pr);
+            await runJob(ghClient, githubRepo, pr);
             knownPRs[pr.number] = pr;
             didAnything = true;
           }
@@ -223,7 +223,7 @@ async function main() {
           }
           else if (status.state === "pending") {
             log("   - classification: looks stuck (pending)");
-            await runJob(ghClient, pr);
+            await runJob(ghClient, githubRepo, pr);
             knownPRs[pr.number] = pr;
             didAnything = true;
           }
