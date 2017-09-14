@@ -115,7 +115,8 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     log(`   - fetching (target: '${jobFolder}')`);
     log("     - cloning");
     const git = simpleGit(jobFolder);
-    await git.clone(ghClient.cloneUrl, jobFolder);
+    await (git as any).init(false);
+    await git.pull(ghClient.pullUrl, jobFolder);
     log(`     - checkout base (${pr.baseRef})`);
     await git.checkout(pr.baseRef);
     log(`     - fetch head repo (${pr.headRepoUrl})`);

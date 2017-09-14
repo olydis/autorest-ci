@@ -83,7 +83,7 @@ export class GitHubCiClient {
     return (await this.getPullRequest(pr.number)).updatedAt.getTime() !== pr.updatedAt.getTime();
   }
 
-  public get cloneUrl(): string {
+  public get pullUrl(): string {
     return `https://${this.githubToken}@github.com/${this.githubOwner}/${this.githubRepo}`;
   }
 
