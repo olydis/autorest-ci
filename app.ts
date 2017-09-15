@@ -206,20 +206,22 @@ async function main() {
         log(`Polling PRs of ${githubOwner}/${githubRepo}`);
         const prs = await ghClient.getPullRequests();
         for (const pr of prs) {
+          log(` - PR #${pr.number} ('${pr.title}')`);
+
           // check commants
           const comments = await ghClient.getComments(pr);
           const prefix = `> ${ciIdentifier}`;
           const commants = comments.filter(x => x.message.startsWith(prefix));
           for (const commant of commants) {
             const command = commant.message.slice(prefix.length).trim();
+            log("   - command: " + command);
             switch (command) {
               case "restart":
                 await ghClient.setComment(commant.id, `~~~
 ${prefix} restart
-< done
+< OK
 ~~~
 `);
-                log("   - classification: commant restart");
                 await runJob(ghClient, githubRepo, pr);
                 knownPRs[pr.number] = pr;
                 didAnything = true;
@@ -235,7 +237,6 @@ ${prefix} restart
           }
 
           if (knownPRs[pr.number] && knownPRs[pr.number].headID === pr.headID) continue; // seen that PR?
-          log(` - PR #${pr.number} ('${pr.title}')`);
           const status = await ghClient.getJobStatus(pr);
           if (!status) {
             log("   - classification: fresh");
