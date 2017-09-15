@@ -219,7 +219,6 @@ async function main() {
               case "restart":
                 await ghClient.setComment(commant.id, `~~~
 ${prefix} restart
-< OK
 ~~~
 `);
                 await runJob(ghClient, githubRepo, pr);
