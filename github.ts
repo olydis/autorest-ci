@@ -78,7 +78,7 @@ export class GitHubCiClient {
     console.log(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/${pr.number}/comments`);
     const res = await this.request.get(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/${pr.number}/comments`);
     const comments = JSON.parse(res);
-    return comments.map(x => { return { id: res.id, message: res.body }; });
+    return comments.map(x => { return { id: x.id, message: x.body }; });
   }
 
   public async setComment(id: number, message: string): Promise<void> {
