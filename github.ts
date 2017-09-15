@@ -82,7 +82,7 @@ export class GitHubCiClient {
   }
 
   public async setComment(id: number, message: string): Promise<void> {
-    await this.request.post(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/comments/${id}`, { body: message });
+    await this.request.post(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/comments/${id}`, { body: JSON.stringify({ body: message }) });
   }
 
   public async isLastStatusOurs(pr: PullRequest): Promise<boolean> {
