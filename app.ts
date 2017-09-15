@@ -261,9 +261,9 @@ ${prefix} restart
       }
       await delay(didAnything ? 20000 : 120000);
     } catch (e) {
-      await delay(120000);
       log("WORKER CARSHED:");
       log(e);
+      await delay(120000);
     }
   }
 }
