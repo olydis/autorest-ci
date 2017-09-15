@@ -74,6 +74,15 @@ export class GitHubCiClient {
     return statuses[this.ciIdentifier];
   }
 
+  public async getComments(pr: PullRequest): Promise<{ id: number, message: string }[]> {
+    const res = await this.request.get(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/${pr.number}/comments`);
+    return res.map(x => { return { id: res.id, message: res.body }; });
+  }
+
+  public async setComment(id: number, message: string): Promise<void> {
+    await this.request.post(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/comments/${id}`, { body: message });
+  }
+
   public async isLastStatusOurs(pr: PullRequest): Promise<boolean> {
     const status = await this.getJobStatus(pr);
     return status && status.description.startsWith(this.statusPrefix);
