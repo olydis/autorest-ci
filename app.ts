@@ -70,7 +70,7 @@ const blobSvc = createBlobService(azStorageAccount, azStorageAccessKey);
 
 async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): Promise<void> {
   try {
-    const jobID = new Date().toISOString().replace(/[:-]/g, "").split('.')[0] + "_" + pr.number;
+    const jobID = pr.number + "_" + new Date().toISOString().replace(/[:-]/g, "").split('.')[0];
     const jobFolder = join(tmpFolder, jobID, repo);
     log("   - creating workspace");
     await mkdir(jobFolder);
@@ -80,7 +80,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
       { publicAccessLevel: "blob" },
       (error, result) => error ? rej(error) : res(result.name)));
     const blobContentSettings = { contentSettings: { contentType: "text/html", contentEncoding: "utf8" } };
-    const blob = workerID + "_" + jobID;
+    const blob = workerID + "_" + repo + "_" + jobID;
     const url = `http://${azStorageAccount}.blob.core.windows.net/${container}/${blob}`;
     const urlAR = url + "?autorefresh";
     await new Promise<string>((res, rej) =>
@@ -226,7 +226,7 @@ ${prefix} restart
                 didAnything = true;
                 break;
               default:
-                await ghClient.setComment(commant.id, `# CI command help
+                await ghClient.setComment(commant.id, `# CI commands for \`${ciIdentifier}\`
 
 | Comment | Effect |
 | --- | --- |
