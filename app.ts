@@ -24,6 +24,7 @@ const githubRepos = [
   "autorest.php",
   "autorest.ruby",
   "autorest.python",
+  "autorest.typescript",
   "autorest.testserver"
 ];
 
