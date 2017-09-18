@@ -94,6 +94,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
   <!--<meta http-equiv="refresh" content="5">-->
   <script>if(location.search) setTimeout(() => location.reload(), 5000);</script>
   <style>body { font-family: monospace; padding: 10px; }</style>
+  <title>${ghClient.getPrName(pr)}</title>
 </head>
 <h3>CI run for <a href="${ghClient.getPrUrl(pr)}">${ghClient.getPrName(pr)}</a> by worker ${workerID} (${ciIdentifier}) <span style="float: right">auto-refresh <a href="${urlAR}">on</a>/<a href="${url}">off</a></span></h3>
 <hr>
