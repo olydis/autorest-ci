@@ -5,6 +5,7 @@
   "main": "dist/app.js",
   "scripts": {
     "start": "node dist/app.js",
+    "start-publisher": "node dist/appPublisher.js",
     "postinstall": "tsc"
   },
   "repository": {

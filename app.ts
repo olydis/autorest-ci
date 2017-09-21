@@ -8,25 +8,11 @@ import * as mkdir from 'mkdirp-promise';
 import { exec } from "child_process";
 import { createBlobService } from "azure-storage";
 import * as as from "azure-storage";
+import { githubOwner, githubRepos } from "./common";
+import { delay } from "./delay";
 
 // config
 const ciIdentifier = `${platform()}-${arch()}`;
-const githubOwner = "Azure";
-const githubRepos = [
-  "autorest",
-  "autorest.common",
-  "autorest.modeler",
-  "autorest.azureresourceschema",
-  "autorest.csharp",
-  "autorest.go",
-  "autorest.java",
-  "autorest.nodejs",
-  "autorest.php",
-  "autorest.ruby",
-  "autorest.python",
-  "autorest.typescript",
-  "autorest.testserver"
-];
 
 const args = process.argv.slice(2);
 if (args.length < 3) {
@@ -46,7 +32,6 @@ if (!githubToken) {
   process.exit(1);
 }
 
-const delay = (ms: number): Promise<void> => new Promise<void>(res => setTimeout(res, ms));
 function log(x: any): void { console.log(x); }
 
 function runCommand(command: string, cwd: string): [() => string, Promise<Error | null>, () => void] {
@@ -119,8 +104,6 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     const git = simpleGit(jobFolder);
     await (git as any).init(false);
     await git.pull(ghClient.pullUrl, pr.baseRef);
-    // log(`     - checkout base (${pr.baseRef})`);
-    // await git.checkout(pr.baseRef);
     log(`     - fetch head repo (${pr.headRepoUrl})`);
     await (git as any).addRemote("other", pr.headRepoUrl);
     await git.fetch("other", "-v");
@@ -198,12 +181,13 @@ async function main() {
   log(` - CI identifier: ${ciIdentifier}`);
   log(` - using tmp folder: ${tmpFolder}`);
 
-  const knownPRs: { [prNumber: number]: PullRequest } = {};
+  const knownPRsx: { [repo: string]: { [prNumber: number]: PullRequest } } = {};
 
   while (true) {
     try {
       let didAnything = false; // for backing off
       for (const githubRepo of githubRepos) {
+        const knownPRs = knownPRsx[githubRepo] = knownPRsx[githubRepo] || {};
         const ghClient = new GitHubCiClient(ciIdentifier, workerID, githubOwner, githubRepo, githubToken);
         log(`Polling PRs of ${githubOwner}/${githubRepo}`);
         const prs = await ghClient.getPullRequests();

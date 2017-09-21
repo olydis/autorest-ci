@@ -2,7 +2,7 @@ import { arch, platform, release, tmpdir } from "os";
 import { RequestAPI, UriOptions, UrlOptions } from "request";
 import { defaults as request_defaults, RequestPromise, RequestPromiseOptions } from "request-promise-native";
 
-export type PullRequest = { updatedAt: Date, number: number, title: string, baseRef: string, baseID: string, headID: string, headRepoUrl: string };
+export type PullRequest = { updatedAt: Date, number: number, title: string, baseRef: string, baseID: string, headID: string, headRepoUrl: string, merged: boolean, state: "open" | "closed" };
 export type State = "success" | "pending" | "failure";
 export type Status = { updatedAt: Date, state: State, description: string, url: string };
 export type Statuses = { [jobName: string]: Status };
@@ -15,7 +15,9 @@ function parsePR(pr: any): PullRequest {
     baseRef: pr.base.ref,
     baseID: pr.base.sha,
     headID: pr.head.sha,
-    headRepoUrl: pr.head.repo.clone_url
+    headRepoUrl: pr.head.repo.clone_url,
+    merged: pr.merged,
+    state: pr.state
   };
 }
 
@@ -24,7 +26,7 @@ export class GitHubCiClient {
   private statusPrefix: string;
 
   public constructor(
-    private readonly ciIdentifier: string,
+    private readonly ciIdentifier: string | null,
     readonly jobUid: string,
     private readonly githubOwner: string,
     private readonly githubRepo: string,
@@ -75,7 +77,6 @@ export class GitHubCiClient {
   }
 
   public async getComments(pr: PullRequest): Promise<{ id: number, message: string }[]> {
-    console.log(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/${pr.number}/comments`);
     const res = await this.request.get(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/${pr.number}/comments`);
     const comments = JSON.parse(res);
     return comments.map(x => { return { id: x.id, message: x.body }; });
@@ -83,6 +84,11 @@ export class GitHubCiClient {
 
   public async setComment(id: number, message: string): Promise<void> {
     await this.request.post(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/comments/${id}`, { body: JSON.stringify({ body: message }) });
+  }
+
+  public async createComment(pr: PullRequest, message: string): Promise<number> {
+    const res = await this.request.post(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/${pr.number}/comments`, { body: JSON.stringify({ body: message }) });
+    return JSON.parse(res).id;
   }
 
   public async isLastStatusOurs(pr: PullRequest): Promise<boolean> {
