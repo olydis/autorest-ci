@@ -117,7 +117,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     const timeStamp2 = Date.now();
     await ghClient.setPullRequestStatus(pr, "pending", "Running test job", urlAR);
     log(`   - running test job`);
-    const [pollOutput, resultPromise, cancel] = runCommand("npm install && npm test", jobFolder);
+    const [pollOutput, resultPromise, cancel] = runCommand("npm install && npm run testci", jobFolder);
     let lastLength = 0;
     const sendFeedback = async () => {
       try {
@@ -142,7 +142,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
 
     // send final feedback one last time
     clearInterval(feedbackTimer);
-    while (mutex) await delay(100);
+    while (mutex) await delay(1);
     await sendFeedback();
 
     // recheck if what we're doing still makes sense
@@ -244,11 +244,11 @@ ${prefix} restart
           }
         }
       }
-      await delay(didAnything ? 20000 : 120000);
+      await delay(didAnything ? 20 : 120);
     } catch (e) {
       log("WORKER CARSHED:");
       log(e);
-      await delay(120000);
+      await delay(120);
     }
   }
 }

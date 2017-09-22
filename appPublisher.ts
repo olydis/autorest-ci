@@ -16,6 +16,19 @@ import { delay } from "./delay";
 const workerID = "PUBLISH" + Math.random().toString(36).substr(2, 5);
 const tmpFolder = join(tmpdir(), workerID);
 
+const npmRepo = new Set<string>([
+  "autorest.modeler",
+  "autorest.azureresourceschema",
+  "autorest.csharp",
+  "autorest.go",
+  "autorest.java",
+  "autorest.nodejs",
+  "autorest.php",
+  "autorest.ruby",
+  "autorest.python",
+  "autorest.typescript",
+  "autorest.testserver"
+]);
 
 const args = process.argv.slice(2);
 if (args.length < 1) {
@@ -52,9 +65,8 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     await mkdir(jobFolder);
 
     log("   - init status comment");
-    const commentHeader = "# release job";
+    const commentHeader = "# publish job";
     const commentId = await ghClient.createComment(pr, commentHeader);
-    // await delay(1000); // make sure comment was created internally... apparently that isn't guaranteed to be done when the REST call returns!
     const updateComment = (message: string): Promise<void> => ghClient.setComment(commentId, `${commentHeader}\n${message}`);
     let comment = "";
     const appendLine = (message: string): Promise<void> => {
@@ -81,26 +93,31 @@ ${comment}~~~`)
       log(`     - error`);
       try {
         log(`       - output: ${pollOutput()}`);
-        await updateComment(`## error
+        await updateComment(`## failed
 ~~~
 ${pollOutput()}
-~~~`)
+~~~`);
       } catch (_) {
         log(`       - output (fallback): ${error}`);
-        await updateComment(`## error
+        await updateComment(`## failed
 ~~~
 ${error}
-~~~`)
+~~~`);
       }
       return;
     }
 
     // process success
     log(`     - success`);
-    await updateComment(`## done
+    try {
+      if (!npmRepo.has(repo)) throw "non-npm repo";
+      await updateComment(`## success (version: ${require(join(jobFolder, "package.json")).version})`);
+    } catch (_) {
+      await updateComment(`## success
 ~~~
-${error}
-~~~`)
+${pollOutput()}
+~~~`);
+    }
   } catch (e) {
     log(`     - job error`);
     log(`       - output: ${e}`);
@@ -119,6 +136,9 @@ async function main() {
   // await runJob(ghClient, "autorest.testserver", pr);
   // if (!!1) return;
 
+  let iteration = 0;
+  const pollDelaySeconds = 30;
+
   while (true) {
     try {
       let didAnything = false; // for backing off
@@ -126,20 +146,6 @@ async function main() {
         const knownOpenPRs = knownOpenPRsx[githubRepo] = knownOpenPRsx[githubRepo] || new Set<number>();
         const ghClient = new GitHubCiClient(null, workerID, githubOwner, githubRepo, githubToken);
         log(`Polling PRs of ${githubOwner}/${githubRepo}`);
-
-        // closed PRs
-        for (const prNumber of knownOpenPRs.values()) {
-          const pr = await ghClient.getPullRequest(prNumber);
-          if (pr.state === "closed") {
-            knownOpenPRs.delete(prNumber);
-            if (pr.merged) {
-              log(` - merged PR #${pr.number} ('${pr.title}')`);
-              await runJob(ghClient, githubRepo, pr);
-            } else {
-              log(` - closed PR #${pr.number} ('${pr.title}')`);
-            }
-          }
-        }
 
         // new PRs
         const prs = await ghClient.getPullRequests();
@@ -149,12 +155,26 @@ async function main() {
             log(` - new PR #${pr.number} ('${pr.title}')`);
           }
         }
+
+        // closed PRs
+        for (const prNumber of knownOpenPRs.values()) {
+          if (!prs.some(pr => pr.number === prNumber)) {
+            const pr = await ghClient.getPullRequest(prNumber);
+            knownOpenPRs.delete(prNumber);
+            if (pr.merged) {
+              log(` - merged PR #${pr.number} ('${pr.title}')`);
+              await runJob(ghClient, githubRepo, pr);
+            } else {
+              log(` - closed PR #${pr.number} ('${pr.title}')`);
+            }
+          }
+        }
       }
-      await delay(didAnything ? 20000 : 120000);
+      await delay(pollDelaySeconds);
     } catch (e) {
       log("WORKER CARSHED:");
       log(e);
-      await delay(120000);
+      await delay(pollDelaySeconds);
     }
   }
 }
