@@ -16,7 +16,7 @@ const ciIdentifier = `${platform()}-${arch()}`;
 
 const args = process.argv.slice(2);
 if (args.length < 3) {
-  console.log("expected args: <GitHub Token ('repo' access)> <Azure Storage Account> <Azure Storage Access Key>");
+  console.log("expected args: <GitHub Token ('repo' access)> <Azure Storage Account> <Azure Storage Access Key> [<working folder>]");
   process.exit(1);
 }
 
@@ -25,7 +25,7 @@ const azStorageAccount = args[1];
 const azStorageAccessKey = args[2];
 const ciStatusTimeoutMs = 1000 * 60 * 5; // 5min
 const workerID = "CI" + Math.random().toString(36).substr(2, 5);
-const tmpFolder = join(tmpdir(), workerID);
+const tmpFolder = join(args[3] || tmpdir(), workerID);
 
 if (!githubToken) {
   console.error("No GitHub token specified");

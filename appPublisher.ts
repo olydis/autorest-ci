@@ -71,7 +71,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     let comment = "";
     const appendLine = (message: string): Promise<void> => {
       comment += `> ${message}\n`;
-      return updateComment(`~~~
+      return updateComment(`~~~ Haskell
 ${comment}~~~`)
     };
 
@@ -94,13 +94,13 @@ ${comment}~~~`)
       try {
         log(`       - output: ${pollOutput()}`);
         await updateComment(`## failed
-~~~
+~~~ Haskell
 ${pollOutput()}
 ~~~`);
       } catch (_) {
         log(`       - output (fallback): ${error}`);
         await updateComment(`## failed
-~~~
+~~~ Haskell
 ${error}
 ~~~`);
       }
@@ -114,7 +114,7 @@ ${error}
       await updateComment(`## success (version: ${require(join(jobFolder, "package.json")).version})`);
     } catch (_) {
       await updateComment(`## success
-~~~
+~~~ Haskell
 ${pollOutput()}
 ~~~`);
     }
@@ -130,11 +130,12 @@ async function main() {
 
   const knownOpenPRsx: { [repo: string]: Set<number> } = {};
 
-  // // test
-  // const ghClient = new GitHubCiClient(null, workerID, githubOwner, "autorest.testserver", githubToken);
-  // const pr = await ghClient.getPullRequest(9);
-  // await runJob(ghClient, "autorest.testserver", pr);
-  // if (!!1) return;
+  // test
+  const ghRepo = "autorest.csharp";
+  const ghClient = new GitHubCiClient(null, workerID, githubOwner, ghRepo, githubToken);
+  const pr = await ghClient.getPullRequest(21);
+  await runJob(ghClient, ghRepo, pr);
+  if (!!1) return;
 
   let iteration = 0;
   const pollDelaySeconds = 30;
