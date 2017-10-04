@@ -131,11 +131,11 @@ async function main() {
   const knownOpenPRsx: { [repo: string]: Set<number> } = {};
 
   // test
-  const ghRepo = "autorest.csharp";
-  const ghClient = new GitHubCiClient(null, workerID, githubOwner, ghRepo, githubToken);
-  const pr = await ghClient.getPullRequest(21);
-  await runJob(ghClient, ghRepo, pr);
-  if (!!1) return;
+  // const ghRepo = "autorest.csharp";
+  // const ghClient = new GitHubCiClient(null, workerID, githubOwner, ghRepo, githubToken);
+  // const pr = await ghClient.getPullRequest(21);
+  // await runJob(ghClient, ghRepo, pr);
+  // if (!!1) return;
 
   let iteration = 0;
   const pollDelaySeconds = 30;
