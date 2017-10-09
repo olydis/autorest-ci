@@ -12,6 +12,8 @@ import * as as from "azure-storage";
 import { githubOwner, githubRepos } from "./common";
 import { delay } from "./delay";
 
+const commentHeader = "# publish job";
+
 // config
 const workerID = "PUBLISH" + Math.random().toString(36).substr(2, 5);
 const tmpFolder = join(tmpdir(), workerID);
@@ -56,8 +58,6 @@ function runCommand(command: string, cwd: string): [() => string, Promise<Error 
   });
   return [() => output, promise, cancel];
 }
-
-const commentHeader = "# publish job";
 
 async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest, commentId: number): Promise<void> {
   try {
@@ -162,10 +162,11 @@ async function main() {
           const prNumber: number = parseInt(_prNumber);
           if (!prs.some(pr => pr.number === prNumber)) {
             const pr = await ghClient.getPullRequest(prNumber);
+            const commentId = knownOpenPRs[prNumber];
             delete knownOpenPRs[prNumber];
             if (pr.merged) {
               log(` - merged PR #${pr.number} ('${pr.title}')`);
-              await runJob(ghClient, githubRepo, pr, knownOpenPRs[_prNumber]);
+              await runJob(ghClient, githubRepo, pr, commentId);
             } else {
               log(` - closed PR #${pr.number} ('${pr.title}')`);
             }
