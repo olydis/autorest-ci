@@ -57,7 +57,9 @@ function runCommand(command: string, cwd: string): [() => string, Promise<Error 
   return [() => output, promise, cancel];
 }
 
-async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): Promise<void> {
+const commentHeader = "# publish job";
+
+async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest, commentId: number): Promise<void> {
   try {
     const jobID = pr.number + "_" + new Date().toISOString().replace(/[:-]/g, "").split('.')[0];
     const jobFolder = join(tmpFolder, jobID, repo);
@@ -65,8 +67,6 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     await mkdir(jobFolder);
 
     log("   - init status comment");
-    const commentHeader = "# publish job";
-    const commentId = await ghClient.createComment(pr, commentHeader);
     const updateComment = (message: string): Promise<void> => ghClient.setComment(commentId, `${commentHeader}\n${message}`);
     let comment = "";
     const appendLine = (message: string): Promise<void> => {
@@ -128,7 +128,7 @@ async function main() {
   log("PUBLISH job info");
   log(` - using tmp folder: ${tmpFolder}`);
 
-  const knownOpenPRsx: { [repo: string]: Set<number> } = {};
+  const knownOpenPRsx: { [repo: string]: { [prNumber: number]: number } } = {};
 
   // test
   // const ghRepo = "autorest.csharp";
@@ -144,27 +144,28 @@ async function main() {
     try {
       let didAnything = false; // for backing off
       for (const githubRepo of githubRepos) {
-        const knownOpenPRs = knownOpenPRsx[githubRepo] = knownOpenPRsx[githubRepo] || new Set<number>();
+        const knownOpenPRs = knownOpenPRsx[githubRepo] = knownOpenPRsx[githubRepo] || {};
         const ghClient = new GitHubCiClient(null, workerID, githubOwner, githubRepo, githubToken);
         log(`Polling PRs of ${githubOwner}/${githubRepo}`);
 
         // new PRs
         const prs = await ghClient.getPullRequests();
         for (const pr of prs) {
-          if (!knownOpenPRs.has(pr.number) && pr.baseRef === "master") {
-            knownOpenPRs.add(pr.number);
+          if (!(pr.number in knownOpenPRs) && pr.baseRef === "master") {
+            knownOpenPRs[pr.number] = await ghClient.createComment(pr, commentHeader + "\n~~~ Haskell\n> waiting for PR to get merged or closed\n~~~");
             log(` - new PR #${pr.number} ('${pr.title}')`);
           }
         }
 
         // closed PRs
-        for (const prNumber of knownOpenPRs.values()) {
+        for (const _prNumber of Object.keys(knownOpenPRs)) {
+          const prNumber: number = parseInt(_prNumber);
           if (!prs.some(pr => pr.number === prNumber)) {
             const pr = await ghClient.getPullRequest(prNumber);
-            knownOpenPRs.delete(prNumber);
+            delete knownOpenPRs[prNumber];
             if (pr.merged) {
               log(` - merged PR #${pr.number} ('${pr.title}')`);
-              await runJob(ghClient, githubRepo, pr);
+              await runJob(ghClient, githubRepo, pr, knownOpenPRs[_prNumber]);
             } else {
               log(` - closed PR #${pr.number} ('${pr.title}')`);
             }
