@@ -6,6 +6,7 @@ export type PullRequest = { updatedAt: Date, number: number, title: string, base
 export type State = "success" | "pending" | "failure";
 export type Status = { updatedAt: Date, state: State, description: string, url: string };
 export type Statuses = { [jobName: string]: Status };
+export type Comment = { id: number, message: string, user: string };
 
 function parsePR(pr: any): PullRequest {
   return {
@@ -30,12 +31,13 @@ export class GitHubCiClient {
     readonly jobUid: string,
     private readonly githubOwner: string,
     private readonly githubRepo: string,
-    readonly githubToken: string
+    readonly githubTokenOfCI: string,
+    private readonly githubUserOfCI: string
   ) {
     this.request = request_defaults({
       headers: {
         "User-Agent": "AutoRest CI",
-        "Authorization": "token " + githubToken
+        "Authorization": "token " + githubTokenOfCI
       }
     });
     this.statusPrefix = `[${jobUid}] `;
@@ -76,14 +78,23 @@ export class GitHubCiClient {
     return statuses[this.ciIdentifier];
   }
 
-  public async getComments(pr: PullRequest): Promise<{ id: number, message: string }[]> {
+  public async getComments(pr: PullRequest): Promise<Comment[]> {
     const res = await this.request.get(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/${pr.number}/comments`);
     const comments = JSON.parse(res);
-    return comments.map(x => { return { id: x.id, message: x.body }; });
+    return comments.map(x => { return { id: x.id, message: x.body, user: x.user.login }; });
+  }
+
+  public async getOwnComments(pr: PullRequest): Promise<Comment[]> {
+    const comments = await this.getComments(pr);
+    return comments.filter(c => c.user === this.githubUserOfCI);
   }
 
   public async setComment(id: number, message: string): Promise<void> {
     await this.request.post(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/comments/${id}`, { body: JSON.stringify({ body: message }) });
+  }
+
+  public async deleteComment(id: number): Promise<void> {
+    await this.request.delete(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/comments/${id}`);
   }
 
   public async createComment(pr: PullRequest, message: string): Promise<number> {
@@ -101,7 +112,7 @@ export class GitHubCiClient {
   }
 
   public get pullUrl(): string {
-    return `https://${this.githubToken}@github.com/${this.githubOwner}/${this.githubRepo}`;
+    return `https://${this.githubTokenOfCI}@github.com/${this.githubOwner}/${this.githubRepo}`;
   }
 
   public getPrUrl(pr: PullRequest): string {

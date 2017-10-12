@@ -145,13 +145,21 @@ async function main() {
       let didAnything = false; // for backing off
       for (const githubRepo of githubRepos) {
         const knownOpenPRs = knownOpenPRsx[githubRepo] = knownOpenPRsx[githubRepo] || {};
-        const ghClient = new GitHubCiClient(null, workerID, githubOwner, githubRepo, githubToken);
+        const ghClient = new GitHubCiClient(null, workerID, githubOwner, githubRepo, githubToken, "olydis");
         log(`Polling PRs of ${githubOwner}/${githubRepo}`);
 
         // new PRs
         const prs = await ghClient.getPullRequests();
         for (const pr of prs) {
           if (!(pr.number in knownOpenPRs) && pr.baseRef === "master") {
+            // try cleaning up previous auto-comments
+            try {
+              const comments = await ghClient.getOwnComments(pr);
+              for (const comment of comments)
+                if (comment.message.startsWith(commentHeader) || comment.message.startsWith("# publish job") /*old header*/)
+                  console.log(comment.message); //await ghClient.deleteComment(comment.id);
+            } catch (e) { }
+
             knownOpenPRs[pr.number] = await ghClient.createComment(pr, commentHeader + "\n~~~ Haskell\n> will publish once/if PR gets merged\n~~~");
             log(` - new PR #${pr.number} ('${pr.title}')`);
           }
