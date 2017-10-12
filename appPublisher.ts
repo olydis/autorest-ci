@@ -156,7 +156,7 @@ async function main() {
             try {
               const comments = await ghClient.getOwnComments(pr);
               for (const comment of comments)
-                if (comment.message.startsWith(commentHeader) || comment.message.startsWith("# publish job") /*old header*/)
+                if (comment.message.startsWith(commentHeader) || comment.message.startsWith("# AutoRest automatic publish job") /*old header*/)
                   await ghClient.deleteComment(comment.id);
             } catch (e) { }
 
