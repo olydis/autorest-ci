@@ -188,7 +188,7 @@ async function main() {
       let didAnything = false; // for backing off
       for (const githubRepo of githubRepos) {
         const knownPRs = knownPRsx[githubRepo] = knownPRsx[githubRepo] || {};
-        const ghClient = new GitHubCiClient(ciIdentifier, workerID, githubOwner, githubRepo, githubToken);
+        const ghClient = new GitHubCiClient(ciIdentifier, workerID, githubOwner, githubRepo, githubToken, "olydis");
         log(`Polling PRs of ${githubOwner}/${githubRepo}`);
         const prs = await ghClient.getPullRequests();
         for (const pr of prs) {
