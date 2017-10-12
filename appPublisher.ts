@@ -12,7 +12,7 @@ import * as as from "azure-storage";
 import { githubOwner, githubRepos } from "./common";
 import { delay } from "./delay";
 
-const commentHeader = "# publish job";
+const commentHeader = "# AutoRest automatic publish job";
 
 // config
 const workerID = "PUBLISH" + Math.random().toString(36).substr(2, 5);
@@ -152,7 +152,7 @@ async function main() {
         const prs = await ghClient.getPullRequests();
         for (const pr of prs) {
           if (!(pr.number in knownOpenPRs) && pr.baseRef === "master") {
-            knownOpenPRs[pr.number] = await ghClient.createComment(pr, commentHeader + "\n~~~ Haskell\n> waiting for PR to get merged or closed\n~~~");
+            knownOpenPRs[pr.number] = await ghClient.createComment(pr, commentHeader + "\n~~~ Haskell\n> will publish once/if PR gets merged\n~~~");
             log(` - new PR #${pr.number} ('${pr.title}')`);
           }
         }
