@@ -236,12 +236,12 @@ ${prefix} restart
           else if (status.state === "pending" && Date.now() - status.updatedAt.getTime() < ciStatusTimeoutMs) {
             log("   - classification: looks active (pending)");
           }
-          else if (status.state === "pending") {
-            log("   - classification: looks stuck (pending)");
-            await runJob(ghClient, githubRepo, pr);
-            knownPRs[pr.number] = pr;
-            didAnything = true;
-          }
+          // else if (status.state === "pending") {
+          //   log("   - classification: looks stuck (pending)");
+          //   await runJob(ghClient, githubRepo, pr);
+          //   knownPRs[pr.number] = pr;
+          //   didAnything = true;
+          // }
         }
       }
       await delay(didAnything ? 20 : 120);
