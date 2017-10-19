@@ -23,7 +23,8 @@ if (args.length < 3) {
 const githubToken = args[0];
 const azStorageAccount = args[1];
 const azStorageAccessKey = args[2];
-const ciStatusTimeoutMs = 1000 * 60 * 5; // 5min
+const timeoutSec = 60 * 30;
+const ciStatusTimeoutMs = 1500 * timeoutSec; // 1.5 * timeout
 const workerID = "CI" + Math.random().toString(36).substr(2, 5);
 const tmpFolder = join(args[3] || tmpdir(), workerID);
 
@@ -129,7 +130,6 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         log(`     - failed to upload logs (${e})`);
       }
       // timeout?
-      const timeoutSec = 60 * 30;
       // log(`     - heartbeat (${(Date.now() - timeStamp2) / 1000 | 0}s / ${timeoutSec | 1000}s)}`);
       if (Date.now() - timeStamp2 > 1000 * timeoutSec) {
         log(`     - cancelling`);
@@ -236,12 +236,12 @@ ${prefix} restart
           else if (status.state === "pending" && Date.now() - status.updatedAt.getTime() < ciStatusTimeoutMs) {
             log("   - classification: looks active (pending)");
           }
-          // else if (status.state === "pending") {
-          //   log("   - classification: looks stuck (pending)");
-          //   await runJob(ghClient, githubRepo, pr);
-          //   knownPRs[pr.number] = pr;
-          //   didAnything = true;
-          // }
+          else if (status.state === "pending") {
+            log("   - classification: looks stuck (pending)");
+            await runJob(ghClient, githubRepo, pr);
+            knownPRs[pr.number] = pr;
+            didAnything = true;
+          }
         }
       }
       await delay(didAnything ? 20 : 120);
