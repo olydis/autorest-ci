@@ -140,6 +140,8 @@ async function main() {
   let iteration = 0;
   const pollDelaySeconds = 30;
 
+  const targetBranch = "master";
+
   while (true) {
     try {
       let didAnything = false; // for backing off
@@ -151,7 +153,7 @@ async function main() {
         // new PRs
         const prs = await ghClient.getPullRequests();
         for (const pr of prs) {
-          if (!(pr.number in knownOpenPRs) && pr.baseRef === "master") {
+          if (!(pr.number in knownOpenPRs) && pr.baseRef === targetBranch) {
             // try cleaning up previous auto-comments
             try {
               const comments = await ghClient.getOwnComments(pr);
@@ -172,7 +174,7 @@ async function main() {
             const pr = await ghClient.getPullRequest(prNumber);
             const commentId = knownOpenPRs[prNumber];
             delete knownOpenPRs[prNumber];
-            if (pr.merged) {
+            if (pr.merged && pr.baseRef === targetBranch) {
               log(` - merged PR #${pr.number} ('${pr.title}')`);
               await runJob(ghClient, githubRepo, pr, commentId);
             } else {
