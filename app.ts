@@ -20,6 +20,8 @@ if (args.length < 3) {
   process.exit(1);
 }
 
+process.on("uncaughtException", e => console.error("Just caught this: " + e));
+
 const githubToken = args[0];
 const azStorageAccount = args[1];
 const azStorageAccessKey = args[2];
