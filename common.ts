@@ -12,5 +12,9 @@ export const githubRepos = [
   "autorest.ruby",
   "autorest.python",
   "autorest.typescript",
-  "autorest.testserver"
+  "autorest.testserver",
+  "perks.async-io",
+  "perks.extension",
+  "perks.eventing",
+  "perks.tasks",
 ];

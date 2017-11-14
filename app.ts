@@ -10,6 +10,9 @@ import { createBlobService } from "azure-storage";
 import * as as from "azure-storage";
 import { githubOwner, githubRepos } from "./common";
 import { delay } from "./delay";
+import { readFileSync } from 'fs';
+
+const commentIndicatorCoverage = "<!--AUTO-GENERATED COVERAGE COMMENT-->";
 
 // config
 const ciIdentifier = `${platform()}-${arch()}`;
@@ -162,6 +165,41 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         log(`       - output (fallback): ${error}`);
       }
       return;
+    }
+
+    // try posting coverage
+    try {
+      // try cleaning up previous auto-comments
+      try {
+        const comments = await ghClient.getOwnComments(pr);
+        for (const comment of comments)
+          if (comment.message.startsWith(commentIndicatorCoverage))
+            await ghClient.deleteComment(comment.id);
+      } catch (e) { }
+
+      // search for report
+      const testServerFolder = join(jobFolder, "node_modules", "@microsoft.azure", "autorest.testserver");
+      const testServerVersion = require(join(testServerFolder, "package.json")).version;
+      const report: any = {};
+      report.General = require(join(testServerFolder, "report-vanilla.json"));
+      report.Azure = require(join(testServerFolder, "report-azure.json"));
+
+      // post report
+      let comment = "";
+      for (const category of Object.keys(report)) {
+        const categoryObject = report[category];
+        comment += `## ${category}\n\n`;
+        comment += `| _FEATURE_ | |\n`;
+        comment += `| :-- | --: |\n`;
+        for (const feature of Object.keys(categoryObject)) {
+          comment += `| \`${feature}\` | ${(categoryObject[feature] > 0 ? "✔️" : "❌")} |\n`;
+        }
+        comment += "\n\n";
+      }
+
+      await ghClient.createComment(pr, `${commentIndicatorCoverage}# Feature Coverage Report *- feature set ${testServerVersion}*\n\n${comment}`);
+    } catch (e) {
+      log(`     - test coverage error: ${e}`);
     }
 
     // process success

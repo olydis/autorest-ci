@@ -12,25 +12,12 @@ import * as as from "azure-storage";
 import { githubOwner, githubRepos } from "./common";
 import { delay } from "./delay";
 
+const commentIndicator = "<!--AUTO-GENERATED PUBLISH JOB COMMENT-->";
 const commentHeader = "# 🤖 AutoRest automatic publish job 🤖";
 
 // config
 const workerID = "PUBLISH" + Math.random().toString(36).substr(2, 5);
 const tmpFolder = join(tmpdir(), workerID);
-
-const npmRepo = new Set<string>([
-  "autorest.modeler",
-  "autorest.azureresourceschema",
-  "autorest.csharp",
-  "autorest.go",
-  "autorest.java",
-  "autorest.nodejs",
-  "autorest.php",
-  "autorest.ruby",
-  "autorest.python",
-  "autorest.typescript",
-  "autorest.testserver"
-]);
 
 const args = process.argv.slice(2);
 if (args.length < 1) {
@@ -67,7 +54,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest, c
     await mkdir(jobFolder);
 
     log("   - init status comment");
-    const updateComment = (message: string): Promise<void> => ghClient.setComment(commentId, `${commentHeader}\n${message}`);
+    const updateComment = (message: string): Promise<void> => ghClient.setComment(commentId, `${commentIndicator}${commentHeader}\n${message}`);
     let comment = "";
     const appendLine = (message: string): Promise<void> => {
       comment += `> ${message}\n`;
@@ -110,7 +97,6 @@ ${error}
     // process success
     log(`     - success`);
     try {
-      if (!npmRepo.has(repo)) throw "non-npm repo";
       await updateComment(`## success (version: ${require(join(jobFolder, "package.json")).version})`);
     } catch (_) {
       await updateComment(`## success
@@ -158,11 +144,11 @@ async function main() {
             try {
               const comments = await ghClient.getOwnComments(pr);
               for (const comment of comments)
-                if (comment.message.startsWith(commentHeader) || comment.message.startsWith("# AutoRest automatic publish job") /*old header*/)
+                if (comment.message.startsWith(commentHeader) || comment.message.startsWith(commentIndicator))
                   await ghClient.deleteComment(comment.id);
             } catch (e) { }
 
-            knownOpenPRs[pr.number] = await ghClient.createComment(pr, commentHeader + "\n~~~ Haskell\n> will publish once PR gets merged\n~~~");
+            knownOpenPRs[pr.number] = await ghClient.createComment(pr, `${commentIndicator}${commentHeader}\n~~~ Haskell\n> will publish once PR gets merged\n~~~`);
             log(` - new PR #${pr.number} ('${pr.title}')`);
           }
         }
