@@ -191,7 +191,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         const features = Object.keys(categoryObject).sort().map(x => [x, categoryObject[x] > 0] as [string, boolean]);
         const percentCoverage = features.filter(x => x[1]).length / features.length * 100 | 0;
         const countMissing = features.filter(x => !x[1]).length;
-        comment += `## ${category}: ${percentCoverage}% ${countMissing ? `(${countMissing} features missing)` : ""}\n\n`;
+        comment += `## ${category}: ${percentCoverage}% ${countMissing ? `(${countMissing} features missing)` : "✔️"}\n\n`;
         for (const feature of features.filter(x => !x[1])) {
           comment += `❌ \`${feature[0]}\`\n`;
         }
