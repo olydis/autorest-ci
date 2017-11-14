@@ -171,7 +171,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     try {
       // try cleaning up previous auto-comments
       try {
-        const comments = await ghClient.getOwnComments(pr);
+        const comments = await ghClient.getComments(pr);
         for (const comment of comments)
           if (comment.message.startsWith(commentIndicatorCoverage))
             await ghClient.deleteComment(comment.id);

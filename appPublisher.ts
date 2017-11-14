@@ -142,7 +142,7 @@ async function main() {
           if (!(pr.number in knownOpenPRs) && pr.baseRef === targetBranch) {
             // try cleaning up previous auto-comments
             try {
-              const comments = await ghClient.getOwnComments(pr);
+              const comments = await ghClient.getComments(pr);
               for (const comment of comments)
                 if (comment.message.startsWith(commentIndicator) || comment.message.startsWith(commentIndicator.trim()))
                   await ghClient.deleteComment(comment.id);
