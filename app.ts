@@ -189,7 +189,9 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
       for (const category of Object.keys(report)) {
         const categoryObject = report[category];
         const features = Object.keys(categoryObject).map(x => [x, categoryObject[x] > 0] as [string, boolean]);
-        comment += `## ${category}: ${(features.filter(x => x[1]).length / features.length * 100 | 0)}%\n\n`;
+        const percentCoverage = features.filter(x => x[1]).length / features.length * 100 | 0;
+        const countMissing = features.filter(x => !x[1]).length;
+        comment += `## ${category}: ${percentCoverage}% ${countMissing ? `(${countMissing} features missing)` : ""}\n\n`;
         for (const feature of features.filter(x => !x[1])) {
           comment += `❌ \`${feature[0]}\`\n`;
         }
