@@ -193,7 +193,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         const countMissing = features.filter(x => !x[1]).length;
         comment += `## ${category}: ${percentCoverage}% ${countMissing ? "" : "✔️"}\n\n`;
         if (countMissing > 0) {
-          comment += `The following ${countMissing} features are not covered by your tests. Please implement them.`;
+          comment += `The following ${countMissing} features are not covered by your tests:\n`;
           for (const feature of features.filter(x => !x[1])) {
             const f = feature[0];
             comment += `❌ [\`${f}\`](https://github.com/Azure/autorest.testserver/search?q=${f})\n`;
@@ -202,7 +202,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         comment += "\n\n";
       }
 
-      await ghClient.createComment(pr, `${commentIndicatorCoverage}# Feature Coverage Report *- feature set ${testServerVersion}*\n\n${comment}`);
+      await ghClient.createComment(pr, `${commentIndicatorCoverage}# 🤖 AutoRest automatic feature coverage report 🤖\n*feature set version ${testServerVersion}*\n\n${comment}`);
     } catch (e) {
       log(`     - test coverage error: ${e}`);
     }
