@@ -188,16 +188,15 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
       let comment = "";
       for (const category of Object.keys(report)) {
         const categoryObject = report[category];
-        comment += `## ${category}\n\n`;
-        comment += `| _FEATURE_ | |\n`;
-        comment += `| :-- | --: |\n`;
-        for (const feature of Object.keys(categoryObject)) {
-          comment += `| \`${feature}\` | ${(categoryObject[feature] > 0 ? "✔️" : "❌")} |\n`;
+        const features = Object.keys(categoryObject).map(x => [x, categoryObject[x] > 0] as [string, boolean]);
+        comment += `## ${category}: ${(features.filter(x => x[1]).length / features.length * 100 | 0)}%\n\n`;
+        for (const feature of features.filter(x => !x[1])) {
+          comment += `❌ \`${feature[0]}\`\n`;
         }
         comment += "\n\n";
       }
 
-      await ghClient.createComment(pr, `${commentIndicatorCoverage}# Feature Coverage Report *- feature set ${testServerVersion}*\n\n${comment}`);
+      await ghClient.createComment(pr, `${commentIndicatorCoverage}\n# Feature Coverage Report *- feature set ${testServerVersion}*\n\n${comment}`);
     } catch (e) {
       log(`     - test coverage error: ${e}`);
     }
