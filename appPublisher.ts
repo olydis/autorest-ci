@@ -12,7 +12,7 @@ import * as as from "azure-storage";
 import { githubOwner, githubRepos } from "./common";
 import { delay } from "./delay";
 
-const commentIndicator = "<!--AUTO-GENERATED PUBLISH JOB COMMENT-->";
+const commentIndicator = "<!--AUTO-GENERATED PUBLISH JOB COMMENT-->\n";
 const commentHeader = "# 🤖 AutoRest automatic publish job 🤖";
 
 // config
@@ -144,7 +144,7 @@ async function main() {
             try {
               const comments = await ghClient.getOwnComments(pr);
               for (const comment of comments)
-                if (comment.message.startsWith(commentHeader) || comment.message.startsWith(commentIndicator))
+                if (comment.message.startsWith(commentIndicator) || comment.message.startsWith(commentIndicator.trim()))
                   await ghClient.deleteComment(comment.id);
             } catch (e) { }
 

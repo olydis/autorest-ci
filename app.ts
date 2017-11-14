@@ -12,7 +12,7 @@ import { githubOwner, githubRepos } from "./common";
 import { delay } from "./delay";
 import { readFileSync } from 'fs';
 
-const commentIndicatorCoverage = "<!--AUTO-GENERATED COVERAGE COMMENT-->";
+const commentIndicatorCoverage = "<!--AUTO-GENERATED COVERAGE COMMENT-->\n";
 
 // config
 const ciIdentifier = `${platform()}-${arch()}`;
@@ -198,7 +198,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         comment += "\n\n";
       }
 
-      await ghClient.createComment(pr, `${commentIndicatorCoverage}\n# Feature Coverage Report *- feature set ${testServerVersion}*\n\n${comment}`);
+      await ghClient.createComment(pr, `${commentIndicatorCoverage}# Feature Coverage Report *- feature set ${testServerVersion}*\n\n${comment}`);
     } catch (e) {
       log(`     - test coverage error: ${e}`);
     }
