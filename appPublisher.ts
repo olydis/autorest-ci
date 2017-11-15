@@ -145,8 +145,8 @@ async function main() {
               const comments = await ghClient.getComments(pr);
               for (const comment of comments)
                 if (comment.message.startsWith(commentIndicator) || comment.message.startsWith(commentIndicator.trim()))
-                  await ghClient.deleteComment(comment.id);
-            } catch (e) { }
+                  try { await ghClient.deleteComment(comment.id); } catch { }
+            } catch { }
 
             knownOpenPRs[pr.number] = await ghClient.createComment(pr, `${commentIndicator}${commentHeader}\n~~~ Haskell\n> will publish once PR gets merged\n~~~`);
             log(` - new PR #${pr.number} ('${pr.title}')`);

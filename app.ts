@@ -174,7 +174,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         const comments = await ghClient.getComments(pr);
         for (const comment of comments)
           if (comment.message.startsWith(commentIndicatorCoverage))
-            await ghClient.deleteComment(comment.id);
+            try { await ghClient.deleteComment(comment.id); } catch { }
       } catch (e) { }
 
       // search for report
