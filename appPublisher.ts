@@ -97,6 +97,7 @@ ${error}
     // process success
     log(`     - success`);
     try {
+      if (repo === "autorest") throw "autorest";
       await updateComment(`## success (version: ${require(join(jobFolder, "package.json")).version})`);
     } catch (_) {
       await updateComment(`## success
