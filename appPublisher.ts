@@ -36,7 +36,7 @@ function runCommand(command: string, cwd: string): [() => string, Promise<Error 
     let res = (e: Error | null) => { r(e); res = () => { }; };
     try {
       const cp = exec(command, { cwd, maxBuffer: 64 * 1000 * 1000 }, err => res(err || null));
-      cancel = () => cp.kill('SIGKILL');
+      cancel = () => { cp.kill('SIGKILL'); res(new Error("timeout")); }
       cp.stdout.on("data", chunk => output += chunk.toString());
       cp.stderr.on("data", chunk => output += chunk.toString());
     } catch (e) {
