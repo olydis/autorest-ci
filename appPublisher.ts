@@ -9,10 +9,9 @@ import * as mkdir from 'mkdirp-promise';
 import { exec, execSync } from "child_process";
 import { createBlobService } from "azure-storage";
 import * as as from "azure-storage";
-import { githubOwner, githubRepos } from "./common";
+import { githubOwner, githubRepos, commentIndicatorPublish } from "./common";
 import { delay } from "./delay";
 
-const commentIndicator = "<!--AUTO-GENERATED PUBLISH JOB COMMENT-->\n";
 const commentHeader = "# 🤖 AutoRest automatic publish job 🤖";
 
 // config
@@ -54,7 +53,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest, c
     await mkdir(jobFolder);
 
     log("   - init status comment");
-    const updateComment = (message: string): Promise<void> => ghClient.setComment(commentId, `${commentIndicator}${commentHeader}\n${message}`);
+    const updateComment = (message: string): Promise<void> => ghClient.setComment(commentId, `${commentIndicatorPublish}${commentHeader}\n${message}`);
     let comment = "";
     const appendLine = (message: string): Promise<void> => {
       comment += `> ${message}\n`;
@@ -145,11 +144,11 @@ async function main() {
             try {
               const comments = await ghClient.getComments(pr);
               for (const comment of comments)
-                if (comment.message.startsWith(commentIndicator) || comment.message.startsWith(commentIndicator.trim()))
+                if (comment.message.startsWith(commentIndicatorPublish))
                   try { await ghClient.deleteComment(comment.id); } catch { }
             } catch { }
 
-            knownOpenPRs[pr.number] = await ghClient.createComment(pr, `${commentIndicator}${commentHeader}\n~~~ Haskell\n> will publish once PR gets merged\n~~~`);
+            knownOpenPRs[pr.number] = await ghClient.createComment(pr, `${commentIndicatorPublish}${commentHeader}\n~~~ Haskell\n> will publish once PR gets merged\n~~~`);
             log(` - new PR #${pr.number} ('${pr.title}')`);
           }
         }

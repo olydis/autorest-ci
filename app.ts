@@ -8,11 +8,9 @@ import * as mkdir from 'mkdirp-promise';
 import { exec } from "child_process";
 import { createBlobService } from "azure-storage";
 import * as as from "azure-storage";
-import { githubOwner, githubRepos } from "./common";
+import { githubOwner, githubRepos, commentIndicatorCoverage } from "./common";
 import { delay } from "./delay";
 import { readFileSync } from 'fs';
-
-const commentIndicatorCoverage = "<!--AUTO-GENERATED COVERAGE COMMENT-->\n";
 
 // config
 const ciIdentifier = `${platform()}-${arch()}`;
@@ -154,19 +152,6 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     // recheck if what we're doing still makes sense
     if (!await ghClient.isLastStatusOurs(pr)) { log("   - abort: looks like another worker handles this PR"); return; }
 
-    // process error
-    if (error) {
-      log(`     - error`);
-      pushFinal(false);
-      await ghClient.setPullRequestStatus(pr, "failure", "" + error, url);
-      try {
-        log(`       - output: ${pollOutput()}`);
-      } catch (_) {
-        log(`       - output (fallback): ${error}`);
-      }
-      return;
-    }
-
     // try posting coverage
     try {
       // try cleaning up previous auto-comments
@@ -205,6 +190,19 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
       await ghClient.createComment(pr, `${commentIndicatorCoverage}# 🤖 AutoRest automatic feature coverage report 🤖\n*feature set version ${testServerVersion}*\n\n${comment}`);
     } catch (e) {
       log(`     - test coverage error: ${e}`);
+    }
+
+    // process error
+    if (error) {
+      log(`     - error`);
+      pushFinal(false);
+      await ghClient.setPullRequestStatus(pr, "failure", "" + error, url);
+      try {
+        log(`       - output: ${pollOutput()}`);
+      } catch (_) {
+        log(`       - output (fallback): ${error}`);
+      }
+      return;
     }
 
     // process success

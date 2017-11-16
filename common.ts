@@ -18,3 +18,7 @@ export const githubRepos = [
   "perks.eventing",
   "perks.tasks",
 ];
+
+
+export const commentIndicatorCoverage = "<!--AUTO-GENERATED COVERAGE COMMENT-->\n";
+export const commentIndicatorPublish = "<!--AUTO-GENERATED PUBLISH JOB COMMENT-->\n";
