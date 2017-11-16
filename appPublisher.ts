@@ -8,8 +8,8 @@ import * as simpleGit from 'simple-git/promise';
 import * as mkdir from 'mkdirp-promise';
 import { exec, execSync } from "child_process";
 import { createBlobService } from "azure-storage";
-import * as as from "azure-storage";
-import { githubOwner, githubRepos, commentIndicatorPublish } from "./common";
+import * as as from 'azure-storage';
+import { commentIndicatorCoverage, commentIndicatorPublish, createBlobContainer, githubOwner, githubRepos } from './common';
 import { delay } from "./delay";
 
 const commentHeader = "# 🤖 AutoRest automatic publish job 🤖";
@@ -19,12 +19,17 @@ const workerID = "PUBLISH" + Math.random().toString(36).substr(2, 5);
 const tmpFolder = join(tmpdir(), workerID);
 
 const args = process.argv.slice(2);
-if (args.length < 1) {
-  console.log("expected args: <GitHub Token ('public_repo' access)>");
+if (args.length < 3) {
+  console.log("expected args: <GitHub Token ('public_repo' access)> <Azure Storage Account> <Azure Storage Access Key> [<working folder>]");
   process.exit(1);
 }
 
 const githubToken = args[0];
+const azStorageAccount = args[1];
+const azStorageAccessKey = args[2];
+
+// connect to storage
+const blobSvc = createBlobService(azStorageAccount, azStorageAccessKey);
 
 function log(x: any): void { console.log(x); }
 
@@ -97,7 +102,26 @@ ${error}
     log(`     - success`);
     try {
       if (repo === "autorest") throw "autorest";
-      await updateComment(`## success (version: ${require(join(jobFolder, "package.json")).version})`);
+      const version = require(join(jobFolder, "package.json")).version;
+
+      // try pushing coverage
+      try {
+        const coverageComment = (await ghClient.getCommentsWithIndicator(pr, commentIndicatorCoverage))[0];
+        if (coverageComment) {
+          const container = await createBlobContainer(blobSvc, "coverage");
+          await new Promise<string>((res, rej) =>
+            blobSvc.createAppendBlobFromText(
+              container,
+              `${repo}_${version}.md`,
+              coverageComment.message,
+              { contentSettings: { contentType: "text/markdown", contentEncoding: "utf8" } },
+              (error, result) => error ? rej(error) : res(result.name)));
+        }
+      } catch (e) {
+        log(`       - coverage publish error: ${e}`);
+      }
+
+      await updateComment(`## success (version: ${version})`);
     } catch (_) {
       await updateComment(`## success
 ~~~ Haskell
@@ -142,10 +166,9 @@ async function main() {
           if (!(pr.number in knownOpenPRs) && pr.baseRef === targetBranch) {
             // try cleaning up previous auto-comments
             try {
-              const comments = await ghClient.getComments(pr);
+              const comments = await ghClient.getCommentsWithIndicator(pr, commentIndicatorPublish);
               for (const comment of comments)
-                if (comment.message.startsWith(commentIndicatorPublish))
-                  try { await ghClient.deleteComment(comment.id); } catch { }
+                await ghClient.tryDeleteComment(comment.id);
             } catch { }
 
             knownOpenPRs[pr.number] = await ghClient.createComment(pr, `${commentIndicatorPublish}${commentHeader}\n~~~ Haskell\n> will publish once PR gets merged\n~~~`);

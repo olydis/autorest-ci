@@ -22,3 +22,15 @@ export const githubRepos = [
 
 export const commentIndicatorCoverage = "<!--AUTO-GENERATED COVERAGE COMMENT-->\n";
 export const commentIndicatorPublish = "<!--AUTO-GENERATED PUBLISH JOB COMMENT-->\n";
+
+
+
+
+import * as as from "azure-storage";
+
+export function createBlobContainer(blobSvc: as.BlobService, purpose: string = ""): Promise<string> {
+  return new Promise<string>((res, rej) => blobSvc.createContainerIfNotExists(
+    `autorest-ci-${purpose}`,
+    { publicAccessLevel: "blob" },
+    (error, result) => error ? rej(error) : res(result.name)));
+}

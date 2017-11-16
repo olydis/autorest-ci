@@ -7,8 +7,8 @@ import * as simpleGit from 'simple-git/promise';
 import * as mkdir from 'mkdirp-promise';
 import { exec } from "child_process";
 import { createBlobService } from "azure-storage";
-import * as as from "azure-storage";
-import { githubOwner, githubRepos, commentIndicatorCoverage } from "./common";
+import * as as from 'azure-storage';
+import { commentIndicatorCoverage, createBlobContainer, githubOwner, githubRepos } from './common';
 import { delay } from "./delay";
 import { readFileSync } from 'fs';
 
@@ -66,10 +66,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     log("   - creating workspace");
     await mkdir(jobFolder);
     log("   - setting up blob storage");
-    const container = await new Promise<string>((res, rej) => blobSvc.createContainerIfNotExists(
-      "autorest-ci",
-      { publicAccessLevel: "blob" },
-      (error, result) => error ? rej(error) : res(result.name)));
+    const container = await createBlobContainer(blobSvc);
     const blobContentSettings = { contentSettings: { contentType: "text/html", contentEncoding: "utf8" } };
     const blob = workerID + "_" + repo + "_" + jobID;
     const url = `http://${azStorageAccount}.blob.core.windows.net/${container}/${blob}`;
@@ -156,10 +153,9 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     try {
       // try cleaning up previous auto-comments
       try {
-        const comments = await ghClient.getComments(pr);
+        const comments = await ghClient.getCommentsWithIndicator(pr, commentIndicatorCoverage);
         for (const comment of comments)
-          if (comment.message.startsWith(commentIndicatorCoverage))
-            try { await ghClient.deleteComment(comment.id); } catch { }
+          await ghClient.tryDeleteComment(comment.id);
       } catch (e) { }
 
       // search for report
@@ -239,9 +235,8 @@ async function main() {
           log(` - PR #${pr.number} ('${pr.title}')`);
 
           // check commants
-          const comments = await ghClient.getComments(pr);
           const prefix = `> ${ciIdentifier}`;
-          const commants = comments.filter(x => x.message.startsWith(prefix));
+          const commants = await ghClient.getCommentsWithIndicator(pr, prefix);
           for (const commant of commants) {
             const command = commant.message.slice(prefix.length).trim();
             log("   - command: " + command);

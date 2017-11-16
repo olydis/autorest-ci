@@ -84,6 +84,10 @@ export class GitHubCiClient {
     return comments.map(x => { return { id: x.id, message: x.body, user: x.user.login }; });
   }
 
+  public async getCommentsWithIndicator(pr: PullRequest, indicator: string): Promise<Comment[]> {
+    return (await this.getComments(pr)).filter(comment => comment.message.startsWith(indicator));
+  }
+
   public async getOwnComments(pr: PullRequest): Promise<Comment[]> {
     const comments = await this.getComments(pr);
     return comments.filter(c => c.user === this.githubUserOfCI);
@@ -95,6 +99,10 @@ export class GitHubCiClient {
 
   public async deleteComment(id: number): Promise<void> {
     await this.request.delete(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/comments/${id}`);
+  }
+
+  public async tryDeleteComment(id: number): Promise<void> {
+    try { await this.deleteComment(id); } catch { }
   }
 
   public async createComment(pr: PullRequest, message: string): Promise<number> {
