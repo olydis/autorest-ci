@@ -28,7 +28,7 @@ export const commentIndicatorPublish = "<!--AUTO-GENERATED PUBLISH JOB COMMENT--
 
 import * as as from "azure-storage";
 
-export function createBlobContainer(blobSvc: as.BlobService, purpose: string = ""): Promise<string> {
+export function createBlobContainer(blobSvc: as.BlobService, purpose: string): Promise<string> {
   return new Promise<string>((res, rej) => blobSvc.createContainerIfNotExists(
     `autorest-ci-${purpose}`,
     { publicAccessLevel: "blob" },
