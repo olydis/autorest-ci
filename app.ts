@@ -162,8 +162,8 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
       const testServerFolder = join(jobFolder, "node_modules", "@microsoft.azure", "autorest.testserver");
       const testServerVersion = require(join(testServerFolder, "package.json")).version;
       const report: any = {};
-      report.General = require(join(testServerFolder, "report-vanilla.json"));
-      report.Azure = require(join(testServerFolder, "report-azure.json"));
+      try { report.General = require(join(testServerFolder, "report-vanilla.json")); } catch { report.General = { "": 0 }; }
+      try { report.Azure = require(join(testServerFolder, "report-azure.json")); } catch { report.Azure = { "": 0 }; }
 
       // post report
       let comment = "";
