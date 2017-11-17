@@ -67,7 +67,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
     await mkdir(jobFolder);
     log("   - setting up blob storage");
     const container = await createBlobContainer(blobSvc, "job-nov");
-    const blobContentSettings = { contentSettings: { contentType: "text/html", contentEncoding: "utf8" } };
+    const blobContentSettings = { contentSettings: { contentType: "text/html; charset=utf-8" } };
     const blob = workerID + "_" + repo + "_" + jobID;
     const url = `http://${azStorageAccount}.blob.core.windows.net/${container}/${blob}`;
     const urlAR = url + "?autorefresh";

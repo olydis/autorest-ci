@@ -114,7 +114,7 @@ ${error}
               container,
               `${repo}_${version}.md`,
               coverageComment.message,
-              { contentSettings: { contentType: "text/markdown", contentEncoding: "utf8" } },
+              { contentSettings: { contentType: "text/markdown; charset=utf-8" } },
               (error, result) => error ? rej(error) : res(result.name)));
         }
       } catch (e) {
