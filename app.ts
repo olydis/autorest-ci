@@ -198,7 +198,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
       pushFinal(false);
       await ghClient.setPullRequestStatus(pr, "failure", "" + error, url);
       try {
-        log(`       - output: ${pollOutput()}`);
+        // log(`       - output: ${pollOutput()}`);
       } catch (_) {
         log(`       - output (fallback): ${error}`);
       }
