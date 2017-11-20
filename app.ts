@@ -162,17 +162,19 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
       const testServerFolder = join(jobFolder, "node_modules", "@microsoft.azure", "autorest.testserver");
       const testServerVersion = require(join(testServerFolder, "package.json")).version;
       const report: any = {};
-      try { report.General = require(join(testServerFolder, "report-vanilla.json")); } catch { report.General = { " ": 0 }; }
-      try { report.Azure = require(join(testServerFolder, "report-azure.json")); } catch { report.Azure = { " ": 0 }; }
+      try { report.General = require(join(testServerFolder, "report-vanilla.json")); } catch { report.General = {}; }
+      try { report.Azure = require(join(testServerFolder, "report-azure.json")); } catch { report.Azure = {}; }
 
       // post report
       let comment = "";
       for (const category of Object.keys(report)) {
         const categoryObject = report[category];
         const features = Object.keys(categoryObject).sort().map(x => [x, categoryObject[x] > 0] as [string, boolean]);
-        const percentCoverage = features.filter(x => x[1]).length / features.length * 100 | 0;
-        const countMissing = features.filter(x => !x[1]).length;
-        comment += `## ${category}: ${percentCoverage}% ${countMissing ? "" : "✔️"}\n\n`;
+        const countTotal = features.length;
+        const countCovered = features.filter(x => x[1]).length;
+        const countMissing = countTotal - countCovered;
+        const percentCoverage = countCovered / (countTotal || 1) * 100 | 0;
+        comment += `## ${category}: ${percentCoverage}% ${!countTotal || countMissing ? "" : "✔️"}\n\n`;
         if (countMissing > 0) {
           comment += `The following ${countMissing} features are not covered by your tests:\n`;
           for (const feature of features.filter(x => !x[1])) {
