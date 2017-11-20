@@ -181,6 +181,8 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
             const f = feature[0];
             comment += `❌ [\`${f}\`](https://github.com/Azure/autorest.testserver/search?q=${f})\n`;
           }
+        } else if (countTotal === 0) {
+          comment += `❌ no tests were run for this category\n`;
         }
         comment += "\n\n";
       }
