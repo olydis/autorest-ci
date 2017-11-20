@@ -48,7 +48,8 @@ function runCommand(command: string, cwd: string): [() => string, Promise<Error 
       cancel = () => cp.kill('SIGKILL');
       cp.stdout.on("data", chunk => output += chunk.toString());
       cp.stderr.on("data", chunk => output += chunk.toString());
-      cp.once("close", () => res(null))
+      cp.once("close", () => res(null));
+      cp.once("exit", () => res(null));
     } catch (e) {
       res(e);
     }
