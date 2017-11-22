@@ -184,7 +184,7 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         const percentCoverage = countCovered / (countTotal || 1) * 100 | 0;
         comment += `## ${percentCoverage === 100 ? "✔️" : "❌️"} ${category}: ${percentCoverage}%\n\n`;
         if (countMissing > 0) {
-          comment += `<details><summary>${countMissing}/${countTotal} features are not covered tests</summary><p>\n\n`;
+          comment += `<details><summary>${countMissing} out of ${countTotal} features are not covered by tests</summary><p>\n\n`;
           let first = true;
           for (const feature of features.filter(x => !x[1])) {
             if (!first) comment += `, `;
