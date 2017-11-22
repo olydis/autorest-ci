@@ -108,7 +108,7 @@ ${error}
       try {
         const coverageComment = (await ghClient.getCommentsWithIndicator(pr, commentIndicatorCoverage))[0];
         if (coverageComment) {
-          const container = await createBlobContainer(blobSvc, "coverage");
+          const container = await createBlobContainer(blobSvc, "coverage-report");
           await new Promise<string>((res, rej) =>
             blobSvc.createBlockBlobFromText(
               container,
