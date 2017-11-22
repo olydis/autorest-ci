@@ -182,15 +182,20 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         const countCovered = features.filter(x => x[1]).length;
         const countMissing = countTotal - countCovered;
         const percentCoverage = countCovered / (countTotal || 1) * 100 | 0;
-        comment += `## ${category}: ${percentCoverage}% ${!countTotal || countMissing ? "" : "✔️"}\n\n`;
+        comment += `## ${percentCoverage === 100 ? "✔️" : "❌️"} ${category}: ${percentCoverage}%\n\n`;
         if (countMissing > 0) {
-          comment += `The following ${countMissing} features are not covered by your tests:\n`;
+          comment += `<details><summary>${countMissing}/${countTotal} features are not covered by your tests</summary><p>\n\n`;
+          let first = true;
           for (const feature of features.filter(x => !x[1])) {
+            if (!first) comment += `, `;
+            first = false;
+
             const f = feature[0];
-            comment += `❌ [\`${f}\`](https://github.com/Azure/autorest.testserver/search?q=${f})\n`;
+            comment += `[\`${f}\`](https://github.com/Azure/autorest.testserver/search?q=${f})`;
           }
+          comment += "</p></details>";
         } else if (countTotal === 0) {
-          comment += `❌ no tests were run for this category\n`;
+          comment += `no tests were run for this category\n`;
         }
         comment += "\n\n";
       }
