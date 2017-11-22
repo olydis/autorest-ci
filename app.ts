@@ -10,7 +10,7 @@ import { createBlobService } from "azure-storage";
 import * as as from 'azure-storage';
 import { commentIndicatorCoverage, createBlobContainer, githubOwner, githubRepos } from './common';
 import { delay } from "./delay";
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 
 // config
 const ciIdentifier = `${platform()}-${arch()}`;
@@ -158,12 +158,20 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
           await ghClient.tryDeleteComment(comment.id);
       } catch (e) { }
 
-      // search for report
+      // search for reports
       const testServerFolder = join(jobFolder, "node_modules", "@microsoft.azure", "autorest.testserver");
       const testServerVersion = require(join(testServerFolder, "package.json")).version;
-      const report: any = {};
-      try { report.General = require(join(testServerFolder, "report-vanilla.json")); } catch { report.General = {}; }
-      try { report.Azure = require(join(testServerFolder, "report-azure.json")); } catch { report.Azure = {}; }
+      const report: { [category: string]: { [feature: string]: number } } = {};
+      const getWorstCaseReport = (category: string): { [feature: string]: number } => {
+        const reports: { [feature: string]: number }[] = readdirSync(testServerFolder).filter(f => f.startsWith(`report-${category}`) && f.endsWith(".json")).map(f => require(join(testServerFolder, f)));
+        const result: { [feature: string]: number } = {};
+        for (const feature of [].concat.apply([], reports.map(r => Object.keys(r))) as string[]) {
+          result[feature] = Math.min(...reports.map(r => r[feature] || 0));
+        }
+        return result;
+      };
+      try { report.General = getWorstCaseReport("vanilla"); } catch { report.General = {}; }
+      try { report.Azure = getWorstCaseReport("azure"); } catch { report.Azure = {}; }
 
       // post report
       let comment = "";
