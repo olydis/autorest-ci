@@ -110,7 +110,7 @@ ${error}
         if (coverageComment) {
           const container = await createBlobContainer(blobSvc, "coverage");
           await new Promise<string>((res, rej) =>
-            blobSvc.createAppendBlobFromText(
+            blobSvc.createBlockBlobFromText(
               container,
               `${repo}_${version}.md`,
               coverageComment.message,
