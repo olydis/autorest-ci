@@ -113,7 +113,7 @@ ${error}
             blobSvc.createBlockBlobFromText(
               container,
               `${repo}_${version}.md`,
-              coverageComment.message,
+              `<!-- ${coverageComment.url} -->\n` + coverageComment.message,
               { contentSettings: { contentType: "text/markdown; charset=utf-8" } },
               (error, result) => error ? rej(error) : res(result.name)));
         }

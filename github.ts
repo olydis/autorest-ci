@@ -6,7 +6,7 @@ export type PullRequest = { updatedAt: Date, number: number, title: string, base
 export type State = "success" | "pending" | "failure";
 export type Status = { updatedAt: Date, state: State, description: string, url: string };
 export type Statuses = { [jobName: string]: Status };
-export type Comment = { id: number, message: string, user: string };
+export type Comment = { id: number, message: string, user: string, url: string };
 
 function parsePR(pr: any): PullRequest {
   return {
@@ -81,7 +81,7 @@ export class GitHubCiClient {
   public async getComments(pr: PullRequest): Promise<Comment[]> {
     const res = await this.request.get(`https://api.github.com/repos/${this.githubOwner}/${this.githubRepo}/issues/${pr.number}/comments`);
     const comments = JSON.parse(res);
-    return comments.map(x => { return { id: x.id, message: x.body, user: x.user.login }; });
+    return comments.map(x => { return { id: x.id, message: x.body, user: x.user.login, url: x.html_url }; });
   }
 
   public async getCommentsWithIndicator(pr: PullRequest, indicator: string): Promise<Comment[]> {
