@@ -170,10 +170,10 @@ async function runJob(ghClient: GitHubCiClient, repo: string, pr: PullRequest): 
         }
         return result;
       };
-      let anyReport = false;
-      try { report.General = getWorstCaseReport("vanilla"); anyReport = true; } catch { report.General = {}; }
-      try { report.Azure = getWorstCaseReport("azure"); anyReport = true; } catch { report.Azure = {}; }
-      if (!anyReport) throw "no report";
+
+      report.General = getWorstCaseReport("vanilla");
+      report.Azure = getWorstCaseReport("azure");
+      if (Object.keys(report).every(cat => Object.keys(report[cat]).length === 0)) throw "no report";
 
       // post report
       let comment = "";
