@@ -17,6 +17,8 @@ export const githubRepos = [
   "perks.extension",
   "perks.eventing",
   "perks.tasks",
+  "autorest.incubator",
+  "autorest-extension-base"
 ];
 
 
