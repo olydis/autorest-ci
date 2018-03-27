@@ -16,7 +16,6 @@ const commentHeader = "# 🤖 AutoRest automatic publish job 🤖";
 
 // config
 const workerID = "PUBLISH" + Math.random().toString(36).substr(2, 5);
-const tmpFolder = join(tmpdir(), workerID);
 
 const args = process.argv.slice(2);
 if (args.length < 3) {
@@ -27,6 +26,7 @@ if (args.length < 3) {
 const githubToken = args[0];
 const azStorageAccount = args[1];
 const azStorageAccessKey = args[2];
+const tmpFolder = join(args[3] || tmpdir(), workerID);
 
 // connect to storage
 const blobSvc = createBlobService(azStorageAccount, azStorageAccessKey);
